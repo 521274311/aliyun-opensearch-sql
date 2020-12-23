@@ -18,6 +18,11 @@ public interface Constants {
     String LEFT_SMALL_BRACKET = "(";
     String RIGHT_SMALL_BRACKET = ")";
     String INCREASE = "ASC";
+    String DISTINCT = "DISTINCT";
+    String COUNT_FUNCTION = "count";
+    String MAX_FUNCTION = "max";
+    String MIN_FUNCTION = "min";
+    String SUM_FUNCTION = "sum";
     String COLON_SINGLE_QUOTES = COLON_MARK  + SINGLE_QUOTES_MARK;
     String SINGLE_QUOTES_SPACE = SINGLE_QUOTES_MARK + SPACE_STRING;
     String SPACE_LEFT_SMALL_BRACKET = SPACE_STRING + LEFT_SMALL_BRACKET;

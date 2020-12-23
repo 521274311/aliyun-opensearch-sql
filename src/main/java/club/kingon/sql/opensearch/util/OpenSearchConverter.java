@@ -30,18 +30,12 @@ import java.util.*;
  *  group by [field]
  *  order by [field] [asc|desc]
  *  limit min,count
- * 1.目前仅支持查询功能
- * 2.当前支持语法
- *  2.1.暂不支持函数模式。
- *  2.2.select仅支持查询字段（暂不支持去重(distinct)，聚合(max,count,min,avg))
- *  2.3.暂不支持group by语法
- *  2.4.where中暂不支持 in 语法以及嵌套查询
  * @author dragons
  * @date 2020/12/18 16:13
  */
-public class OpenSearchParser {
+public class OpenSearchConverter {
 
-    public static SearchParams queryParser(String sql) {
+    public static SearchParams querySqlConvert(String sql) {
         SQLStatement statement = SQLUtils.parseSingleStatement(sql, Constants.MYSQL_DB_TYPE);
         MySqlSchemaStatVisitor visitor = new MySqlSchemaStatVisitor();
         statement.accept(visitor);
@@ -51,17 +45,23 @@ public class OpenSearchParser {
         Tuple2<Integer, Integer> startAndHits = explainStartAndHits(limit);
         Map<String, String> fetchFieldsAndAlias = explainFetchFieldsAndAlias(block);
         Tuple2<String, String> queryAndFilter = explainQueryAndFilter((SQLBinaryOpExpr) block.getWhere());
+        Set<Distinct> distinctSet = explainDistinct(block);
+        Set<Aggregate> aggregateSet = explainAggregate(visitor);
         Sort sort = explainSort(block);
         Config config = OpenSearchBuilderUtil.configBuilder()
                 .appNames(appNames)
                 .start(startAndHits.t1)
                 .hits(startAndHits.t2)
                 .searchFormat(SearchFormat.FULLJSON)
-                .fetchFields(new ArrayList<>(fetchFieldsAndAlias.keySet()))
+                .fetchFields(!fetchFieldsAndAlias.isEmpty() ?
+                        new ArrayList<>(fetchFieldsAndAlias.keySet())
+                        : null)
                 .build();
         return OpenSearchBuilderUtil.searchParamsBuilder(config, !Constants.EMPTY_STRING.equals(queryAndFilter.t1) ? queryAndFilter.t1 : null)
                 .filter(!Constants.EMPTY_STRING.equals(queryAndFilter.t2) ? queryAndFilter.t2 : null)
                 .sort(sort)
+                .distincts(!distinctSet.isEmpty() ? distinctSet : null)
+                .aggregates(!aggregateSet.isEmpty() ? aggregateSet : null)
                 .build();
     }
 
@@ -72,6 +72,11 @@ public class OpenSearchParser {
         return appNames;
     }
 
+    /**
+     * https://help.aliyun.com/document_detail/180150.html?spm=a2c4g.11186623.6.601.3e0b67af7uPIcA
+     * @param limit sql limit
+     * @return Tuple2<start, hit>
+     */
     private static Tuple2<Integer, Integer> explainStartAndHits(SQLLimit limit) {
         int offset = 0, count = 10;
         if (limit != null) {
@@ -90,17 +95,24 @@ public class OpenSearchParser {
      */
     private static Map<String, String> explainFetchFieldsAndAlias(MySqlSelectQueryBlock block) {
         List<SQLSelectItem> sqlSelectItemList = block.getSelectList();
-        if (sqlSelectItemList == null || sqlSelectItemList.size() <= 0) {
+        if (sqlSelectItemList == null || sqlSelectItemList.size() <= 0
+                || sqlSelectItemList.get(0).getExpr() instanceof SQLAllColumnExpr) {
             return new HashMap<>();
         }
         Map<String, String> result = new HashMap<>();
-        sqlSelectItemList.forEach(x -> result.put(((SQLIdentifierExpr)x.getExpr()).getLowerName(),
-                x.getAlias() != null && !Constants.EMPTY_STRING.equals(x.getAlias()) ? x.getAlias()
-                        : ((SQLIdentifierExpr)x.getExpr()).getLowerName()));
+        sqlSelectItemList.forEach(x -> {
+            String fieldName = x.getExpr() instanceof SQLIdentifierExpr ? ((SQLIdentifierExpr)x.getExpr()).getLowerName()
+                    : ((SQLAggregateExpr) x.getExpr()).getMethodName().toLowerCase();
+            result.put(fieldName,
+                    x.getAlias() != null && !Constants.EMPTY_STRING.equals(x.getAlias()) ? x.getAlias()
+                            : fieldName);
+        });
         return result;
     }
 
     /**
+     * https://help.aliyun.com/document_detail/180014.html?spm=a2c4g.11174283.6.591.1c715a19cCIha3
+     * https://help.aliyun.com/document_detail/180028.html?spm=a2c4g.11186623.6.595.12db4244fxsjxg
      * todo 已完成query与filter提取，Range 提取待完成(https://help.aliyun.com/document_detail/121966.html?spm=5176.15104540.0.dexternal.15fdcc02K1zQyR)
      * 下钻一级递归提取query和filter
      * @return Tuple2<query, filter>
@@ -124,14 +136,14 @@ public class OpenSearchParser {
                             value = value.substring(0, value.length() - 1) + Constants.TAIL_TERMINATOR;
                         }
                         return Tuple2.of(((SQLIdentifierExpr) leftChildSqlExpr).getLowerName()
-                                + Constants.COLON_SINGLE_QUOTES + value + Constants.SINGLE_QUOTES_SPACE,
+                                + Constants.COLON_SINGLE_QUOTES + value + Constants.SINGLE_QUOTES_MARK,
                                 Constants.EMPTY_STRING);
                     }
                 }
             } else if (leftChildSqlExpr instanceof SQLIdentifierExpr &&
                     (rightChildSqlExpr instanceof SQLIntegerExpr || rightChildSqlExpr instanceof SQLNumberExpr)) {
                 return Tuple2.of(Constants.EMPTY_STRING, ((SQLIdentifierExpr) leftChildSqlExpr).getLowerName()
-                        + expr.getOperator().name + ((SQLValuableExpr) rightChildSqlExpr).getValue() + Constants.SPACE_STRING);
+                        + expr.getOperator().name + ((SQLValuableExpr) rightChildSqlExpr).getValue());
             }
         } else {
             Tuple2<String, String> leftTp = explainQueryAndFilter((SQLBinaryOpExpr) leftChildSqlExpr);
@@ -164,6 +176,110 @@ public class OpenSearchParser {
         return Tuple2.of(Constants.EMPTY_STRING, Constants.EMPTY_STRING);
     }
 
+    /**
+     * https://help.aliyun.com/document_detail/180073.html?spm=a2c4g.11186623.6.598.24076660PS4kxU
+     */
+    private static Set<Distinct> explainDistinct(MySqlSelectQueryBlock block) {
+        boolean globelDistinct = block.getDistionOption() == 2;
+        Set<Distinct> distinctSet = new HashSet<>();
+        if (globelDistinct) {
+            if (block.getSelectList().size() != 1) {
+                throw new RuntimeException("OpenSearch distinct is used, the select field total only be one");
+            }
+            SQLExpr expr;
+            if (! ((expr = block.getSelectList().get(0).getExpr()) instanceof SQLIdentifierExpr)) {
+                throw new RuntimeException("OpenSearch distinct field must be attribute field");
+            }
+            distinctSet.add(new Distinct(((SQLIdentifierExpr) expr).getLowerName()) {{
+                setReserved(false);
+                setUpdateTotalHit(true);
+            }});
+        } else {
+            for (SQLSelectItem item : block.getSelectList()) {
+                SQLExpr expr = item.getExpr();
+                if (expr instanceof SQLAggregateExpr) {
+                    SQLAggregateOption option = ((SQLAggregateExpr) expr).getOption();
+                    if (option != null && Constants.DISTINCT.equalsIgnoreCase(option.name())) {
+                        List<SQLExpr> arguments = ((SQLAggregateExpr) expr).getArguments();
+                        if (arguments.size() != 1) {
+                            throw new RuntimeException("OpenSearch distinct is used, the select field total only be one");
+                        }
+                        if (! ((expr = arguments.get(0)) instanceof SQLIdentifierExpr)) {
+                            throw new RuntimeException("OpenSearch distinct field must be attribute field");
+                        }
+                        distinctSet.add(new Distinct(((SQLIdentifierExpr) expr).getLowerName()) {{
+                            setReserved(false);
+                            setUpdateTotalHit(true);
+                        }});
+                        break;
+                    }
+                }
+            }
+        }
+        return distinctSet;
+    }
+
+    /**
+     * https://help.aliyun.com/document_detail/180049.html?spm=a2c4g.11186623.6.596.613720646TDUa4
+     */
+    private static Set<Aggregate> explainAggregate(MySqlSchemaStatVisitor visitor) {
+        Set<TableStat.Column> groupByColumns = visitor.getGroupByColumns();
+        List<SQLAggregateExpr> aggregateFunctions = visitor.getAggregateFunctions();
+        Aggregate aggregate = null;
+        if (groupByColumns != null && !groupByColumns.isEmpty()) {
+            aggregate = new Aggregate();
+            StringBuilder groupKeyBuilder = new StringBuilder();
+            for (TableStat.Column column : groupByColumns) {
+                groupKeyBuilder.append(column.getName()).append(";");
+            }
+            aggregate.setGroupKey(groupKeyBuilder.substring(0, groupKeyBuilder.length() -1));
+        }
+        if (aggregateFunctions != null && !aggregateFunctions.isEmpty()) {
+            if (aggregate == null) {
+                throw new RuntimeException("AggFun must have groupKey.");
+            }
+            StringBuilder aggFunBuilder = new StringBuilder();
+            String aggFunName;
+            List<SQLExpr> arguments;
+            for (SQLAggregateExpr aggregateExpr : aggregateFunctions) {
+                aggFunName = aggregateExpr.getMethodName().toLowerCase();
+                arguments = aggregateExpr.getArguments();
+                if (!Constants.COUNT_FUNCTION.equals(aggFunName) && (arguments == null || arguments.size() != 1)) {
+                    throw new RuntimeException("AggFun that is not count function must have a argument.");
+                }
+                Object argumentName = "";
+                if (!Constants.COUNT_FUNCTION.equals(aggFunName)) {
+                    SQLExpr argumentExpr = arguments.get(0);
+                    if (argumentExpr instanceof SQLValuableExpr) {
+                        argumentName = ((SQLValuableExpr) argumentExpr).getValue();
+                    } else if (argumentExpr instanceof SQLIdentifierExpr) {
+                        argumentName = ((SQLIdentifierExpr) argumentExpr).getLowerName();
+                    } else {
+                        throw new RuntimeException("AggFun's argument only support attribute field.");
+                    }
+                }
+                switch (aggFunName) {
+                    case Constants.COUNT_FUNCTION:
+                    case Constants.MAX_FUNCTION:
+                    case Constants.MIN_FUNCTION:
+                    case Constants.SUM_FUNCTION:
+                        aggFunBuilder.append(aggFunName).append(argumentName)
+                                .append(Constants.LEFT_SMALL_BRACKET)
+                                .append(Constants.RIGHT_SMALL_BRACKET).append("#"); break;
+                    default:
+                        throw new RuntimeException("AggFun only allow to use count,sum,max,min. Your aggFun: " + aggFunName);
+                }
+            }
+            aggregate.setAggFun(aggFunBuilder.substring(0, aggFunBuilder.length() - 1));
+        }
+        Set<Aggregate> aggregateSet = new HashSet<>();
+        aggregateSet.add(aggregate);
+        return aggregateSet;
+    }
+
+    /**
+     * https://help.aliyun.com/document_detail/180032.html?spm=a2c4g.11186623.6.597.5cec742eZ5UGWX
+     */
     private static Sort explainSort(MySqlSelectQueryBlock block) {
         if (block.getOrderBy() == null) {
             return null;
