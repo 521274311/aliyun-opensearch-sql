@@ -46,7 +46,7 @@ public class OpenSearchConverter {
         Map<String, String> fetchFieldsAndAlias = explainFetchFieldsAndAlias(block);
         Tuple2<String, String> queryAndFilter = explainQueryAndFilter((SQLBinaryOpExpr) block.getWhere());
         Set<Distinct> distinctSet = explainDistinct(block);
-        Set<Aggregate> aggregateSet = explainAggregate(visitor);
+        Set<Aggregate> aggregateSet = explainAggregate(block, visitor);
         Sort sort = explainSort(block);
         Config config = OpenSearchBuilderUtil.configBuilder()
                 .appNames(appNames)
@@ -222,10 +222,11 @@ public class OpenSearchConverter {
     /**
      * https://help.aliyun.com/document_detail/180049.html?spm=a2c4g.11186623.6.596.613720646TDUa4
      */
-    private static Set<Aggregate> explainAggregate(MySqlSchemaStatVisitor visitor) {
+    private static Set<Aggregate> explainAggregate(MySqlSelectQueryBlock block, MySqlSchemaStatVisitor visitor) {
         Set<TableStat.Column> groupByColumns = visitor.getGroupByColumns();
         List<SQLAggregateExpr> aggregateFunctions = visitor.getAggregateFunctions();
         Aggregate aggregate = null;
+        // field
         if (groupByColumns != null && !groupByColumns.isEmpty()) {
             aggregate = new Aggregate();
             StringBuilder groupKeyBuilder = new StringBuilder();
@@ -234,6 +235,7 @@ public class OpenSearchConverter {
             }
             aggregate.setGroupKey(groupKeyBuilder.substring(0, groupKeyBuilder.length() -1));
         }
+        // group by
         if (aggregateFunctions != null && !aggregateFunctions.isEmpty()) {
             if (aggregate == null) {
                 throw new RuntimeException("AggFun must have groupKey.");
@@ -272,8 +274,11 @@ public class OpenSearchConverter {
             }
             aggregate.setAggFun(aggFunBuilder.substring(0, aggFunBuilder.length() - 1));
         }
+        // having
         Set<Aggregate> aggregateSet = new HashSet<>();
-        aggregateSet.add(aggregate);
+        if (aggregate != null) {
+            aggregateSet.add(aggregate);
+        }
         return aggregateSet;
     }
 
