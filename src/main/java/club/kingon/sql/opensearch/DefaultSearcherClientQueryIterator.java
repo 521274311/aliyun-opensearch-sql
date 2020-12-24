@@ -17,7 +17,6 @@ import com.aliyun.opensearch.sdk.generated.commons.OpenSearchClientException;
 import com.aliyun.opensearch.sdk.generated.commons.OpenSearchException;
 import com.aliyun.opensearch.sdk.generated.search.*;
 import com.aliyun.opensearch.sdk.generated.search.general.SearchResult;
-import com.sun.istack.internal.Nullable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -153,7 +152,9 @@ public class DefaultSearcherClientQueryIterator extends AbstractSearcherClientQu
         return false;
     }
 
-    @Nullable
+    /**
+     * Nullable
+     */
     @Override
     public String next() {
         try {
