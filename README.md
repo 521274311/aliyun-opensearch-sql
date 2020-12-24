@@ -19,7 +19,7 @@ limit min,count
 例：
 ```  
 select name, count(), max(distinct group_id)  
-where app_name  
+from app_name  
 where id>=1 and id<=100000 and name like 'dragons%'  
 group by name  
 limit 0, 100
