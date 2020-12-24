@@ -3,6 +3,7 @@ package club.kingon.sql.opensearch;
 import club.kingon.sql.opensearch.util.Constants;
 import club.kingon.sql.opensearch.util.OpenSearchBuilderUtil;
 import club.kingon.sql.opensearch.util.OpenSearchConverter;
+import club.kingon.sql.opensearch.util.ResponseConstants;
 import com.alibaba.druid.sql.SQLUtils;
 import com.alibaba.druid.sql.ast.SQLStatement;
 import com.alibaba.druid.sql.ast.expr.SQLBinaryOpExpr;
@@ -102,35 +103,35 @@ public class DefaultSearcherClientQueryIterator extends AbstractSearcherClientQu
                     searchParamsBuilder.deepPaging(deepPaging);
                 }
                 SearchParams searchParams = searchParamsBuilder.build();
-                System.out.println(searchParams);
                 if (log.isDebugEnabled()) {
                     log.debug("SearchParams: {}", searchParams);
                 }
                 SearchResult searchResult = searcherClient.execute(searchParams);
-                System.out.println(searchResult);
                 if (log.isDebugEnabled()) {
                     log.debug("SearchResult: {}", searchResult);
                 }
                 JSONObject resultJson = new JSONObject(searchResult.getResult());
-                String status = resultJson.getString("status");
+                String status = resultJson.getString(ResponseConstants.STATUS);
                 if (queryMode == SearchQueryModeEnum.SCROLL) {
-                    String scrollId = resultJson.getJSONObject("result").getString("scroll_id");
+                    String scrollId = resultJson.getJSONObject(ResponseConstants.RESULT).getString(ResponseConstants.SCROLLID);
                     if (deepPaging.getScrollId() == null) {
                         deepPaging.setScrollId(scrollId);
                         searchResult = searcherClient.execute(searchParams);
                         resultJson = new JSONObject(searchResult.getResult());
-                        status = resultJson.getString("status");
-                        if ("OK".equals(status)) {
-                            scrollId = resultJson.getJSONObject("result").getString("scroll_id");
+                        status = resultJson.getString(ResponseConstants.STATUS);
+                        if (ResponseConstants.STATUS_OK.equals(status)) {
+                            scrollId = resultJson.getJSONObject(ResponseConstants.RESULT).getString(ResponseConstants.SCROLLID);
                         } else {
                             deepPaging.setScrollId(null);
-                            log.warn("scroll mode request fail, info: {}", searchResult.getResult());
+                            if (log.isWarnEnabled()) {
+                                log.warn("scroll mode request fail, info: {}", searchResult.getResult());
+                            }
                         }
                     }
                     deepPaging.setScrollId(scrollId);
                 }
-                JSONArray items = resultJson.getJSONObject("result").getJSONArray("items");
-                if ("OK".equals(status) && items.length() > 0) {
+                JSONArray items = resultJson.getJSONObject(ResponseConstants.RESULT).getJSONArray(ResponseConstants.RESULT_ITEMS);
+                if (ResponseConstants.STATUS_OK.equals(status) && items.length() > 0) {
                     result = searchResult.getResult();
                     if (queryMode == SearchQueryModeEnum.HIT) {
                         offset += num;
