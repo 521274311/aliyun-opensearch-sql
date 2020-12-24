@@ -118,6 +118,27 @@ public class OpenSearchBuilderUtil {
             this.query = query;
         }
 
+        private SearchParamsBuilder(SearchParams searchParams) {
+            searchParams(searchParams);
+        }
+
+        public SearchParamsBuilder searchParams(SearchParams searchParams) {
+            this.config = searchParams.getConfig();
+            this.query = searchParams.getQuery();
+            this.filter = searchParams.getFilter();
+            this.sort = searchParams.getSort();
+            this.rank = searchParams.getRank();
+            this.aggregates = searchParams.getAggregates();
+            this.distincts = searchParams.getDistincts();
+            this.summaries = searchParams.getSummaries();
+            this.queryProcessorNames = searchParams.getQueryProcessorNames();
+            this.deepPaging = searchParams.getDeepPaging();
+            this.disableFunctions = searchParams.getDisableFunctions();
+            this.customParam = searchParams.getCustomParam();
+            this.suggest = searchParams.getSuggest();
+            return this;
+        }
+
         public SearchParamsBuilder config(Config config) {
             this.config = config;
             return this;
@@ -207,5 +228,9 @@ public class OpenSearchBuilderUtil {
 
     public static SearchParamsBuilder searchParamsBuilder(Config config, String query) {
         return new SearchParamsBuilder(config, query);
+    }
+
+    public static SearchParamsBuilder searchParamsBuilder(SearchParams searchParams) {
+        return new SearchParamsBuilder(searchParams);
     }
 }

@@ -1,12 +1,12 @@
-package club.kingon.sql.opensearch.util;
+package club.kingon.sql.opensearch;
 
 /**
  * @author dragons
  * @date 2020/12/22 18:42
  */
-class Tuple2<T, P> {
-    T t1;
-    P t2;
+public class Tuple2<T, P> {
+    public T t1;
+    public P t2;
 
     private Tuple2() {
     }
@@ -16,7 +16,7 @@ class Tuple2<T, P> {
         this.t2 = t2;
     }
 
-    static <T, P>Tuple2<T, P> of(T t, P p) {
+    public static <T, P>Tuple2<T, P> of(T t, P p) {
         return new Tuple2<>(t, p);
     }
 
