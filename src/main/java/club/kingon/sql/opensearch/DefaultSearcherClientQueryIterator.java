@@ -51,6 +51,7 @@ public class DefaultSearcherClientQueryIterator extends AbstractSearcherClientQu
     private String result;
     private int retry = 1;
     private long retryTimeInterval = 100L;
+    private long pagingInterval = 100L;
 
     public DefaultSearcherClientQueryIterator(SearcherClient client, String sql) {
         super();
@@ -155,9 +156,21 @@ public class DefaultSearcherClientQueryIterator extends AbstractSearcherClientQu
     @Nullable
     @Override
     public String next() {
+        try {
+            Thread.sleep(pagingInterval);
+        } catch (InterruptedException e) {
+        }
         String res = result;
         result = null;
         return res;
+    }
+
+    public long getPagingInterval() {
+        return pagingInterval;
+    }
+
+    public void setPagingInterval(long pagingInterval) {
+        this.pagingInterval = pagingInterval;
     }
 
     public void setScrollExpr(String expr) {
