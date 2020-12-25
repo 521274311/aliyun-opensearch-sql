@@ -131,13 +131,16 @@ public class DefaultSearcherClientQueryIterator extends AbstractSearcherClientQu
                     deepPaging.setScrollId(scrollId);
                 }
                 JSONArray items = resultJson.getJSONObject(ResponseConstants.RESULT).getJSONArray(ResponseConstants.RESULT_ITEMS);
-                if (ResponseConstants.STATUS_OK.equals(status) && items.length() > 0) {
-                    result = searchResult.getResult();
-                    if (queryMode == SearchQueryModeEnum.HIT) {
-                        offset += num;
+                if (ResponseConstants.STATUS_OK.equals(status)) {
+                    if (items.length() > 0) {
+                        result = searchResult.getResult();
+                        if (queryMode == SearchQueryModeEnum.HIT) {
+                            offset += num;
+                        }
+                        count -= num;
+                        return true;
                     }
-                    count -= num;
-                    return true;
+                    return false;
                 }
             } catch (OpenSearchException | OpenSearchClientException e) {
                 if (retry < 0) {
