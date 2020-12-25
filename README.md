@@ -1,5 +1,6 @@
 # aliyun-opensearch-sql
 ### 提供阿里云开放搜索SQL支持
+##### 官方文档地址：https://help.aliyun.com/product/29102.html  
 
 #### SQL使用语法（同Mysql语法）：  
 ```
