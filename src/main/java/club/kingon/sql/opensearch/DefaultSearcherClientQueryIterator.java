@@ -197,4 +197,48 @@ public class DefaultSearcherClientQueryIterator extends AbstractSearcherClientQu
     public void setRetryTimeInterval(long retryTimeInterval) {
         this.retryTimeInterval = retryTimeInterval;
     }
+
+    public List<String> getAppNames() {
+        return appNames;
+    }
+
+    public int getOffset() {
+        return offset;
+    }
+
+    public int getCount() {
+        return count;
+    }
+
+    public List<String> getFetchField() {
+        return fetchField;
+    }
+
+    public String getQuery() {
+        return query;
+    }
+
+    public String getFilter() {
+        return filter;
+    }
+
+    public Set<Distinct> getDistincts() {
+        return distincts;
+    }
+
+    public Set<Aggregate> getAggregates() {
+        return aggregates;
+    }
+
+    public Sort getSort() {
+        return sort;
+    }
+
+    public DeepPaging getDeepPaging() {
+        return deepPaging;
+    }
+
+    public SearchQueryModeEnum getQueryMode() {
+        return queryMode;
+    }
 }
