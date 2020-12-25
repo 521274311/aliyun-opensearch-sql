@@ -163,7 +163,10 @@ public class OpenSearchConverter {
      * @return Tuple2<query, filter>
      */
     private static Tuple2<String, String> getQueryAndFilter(SQLBinaryOpExpr expr) {
-        SQLExpr leftChildSqlExpr = expr.getLeft(), rightChildSqlExpr = expr.getRight();
+        SQLExpr leftChildSqlExpr = null, rightChildSqlExpr = null;
+        if (expr == null || (leftChildSqlExpr = expr.getLeft()) == null && (rightChildSqlExpr = expr.getRight()) == null) {
+            return Tuple2.of(Constants.EMPTY_STRING, Constants.EMPTY_STRING);
+        }
         if (!(leftChildSqlExpr instanceof SQLBinaryOpExpr) || !(rightChildSqlExpr instanceof SQLBinaryOpExpr)) {
             if (leftChildSqlExpr instanceof SQLIdentifierExpr && Constants.EQUAL_SIGN.equalsIgnoreCase(expr.getOperator().name)) {
                 return Tuple2.of( ((SQLIdentifierExpr) leftChildSqlExpr).getLowerName()
