@@ -34,7 +34,7 @@ TableName: person
 4. kname => name 中文-通用分析方式  
 5. age => age 关键字分析方式  
 
-**属性**：
+**属性**：  
 unique_id, uid, age  
 
 **默认展示字段**：  
