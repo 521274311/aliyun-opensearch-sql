@@ -177,10 +177,10 @@ public class OpenSearchConverter {
                  if (Constants.LIKE.equalsIgnoreCase(expr.getOperator().name)) {
                     String value = (String) ((SQLCharExpr) rightChildSqlExpr).getValue();
                     if (value != null && !value.isEmpty()) {
-                        if (value.charAt(0) == Constants.PERCENT_SIGN_CHARACTER) {
+                        if (value.charAt(0) != Constants.PERCENT_SIGN_CHARACTER) {
                             value = Constants.HEAD_TERMINATOR + value.substring(1);
                         }
-                        if (value.charAt(value.length() - 1) == Constants.PERCENT_SIGN_CHARACTER) {
+                        if (value.charAt(value.length() - 1) != Constants.PERCENT_SIGN_CHARACTER) {
                             value = value.substring(0, value.length() - 1) + Constants.TAIL_TERMINATOR;
                         }
                         return Tuple2.of(((SQLIdentifierExpr) leftChildSqlExpr).getLowerName()
