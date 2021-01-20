@@ -86,7 +86,7 @@ while (iterator.hasNextOne()) {
 }  
 ```
 
-#### 当前版本：v0.0.1-SNAPSHOT  
+#### 当前版本：v0.0.2-SNAPSHOT  
 #### 当前版本支持：  
 1.目前仅支持查询功能  
 2.当前支持语法  

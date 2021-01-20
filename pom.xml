@@ -6,7 +6,7 @@
 
     <groupId>club.kingons.plugins.sql</groupId>
     <artifactId>aliyun-opensearch-sql</artifactId>
-    <version>0.0.1-SNAPSHOT</version>
+    <version>0.0.2-SNAPSHOT</version>
     <build>
         <plugins>
             <plugin>
@@ -59,4 +59,18 @@
             <version>${opensearch.version}</version>
         </dependency>
     </dependencies>
+
+    <distributionManagement>
+        <repository>
+            <id>release</id>
+            <name>release</name>
+            <url>http://172.18.54.178:8996/repository/maven-releases/</url>
+        </repository>
+
+        <snapshotRepository>
+            <id>snapshots</id>
+            <name>release</name>
+            <url>http://172.18.54.178:8996/repository/maven-snapshots/</url>
+        </snapshotRepository>
+    </distributionManagement>
 </project>
