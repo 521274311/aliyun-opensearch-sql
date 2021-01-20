@@ -12,6 +12,7 @@ import com.alibaba.druid.sql.dialect.mysql.ast.statement.MySqlSelectQueryBlock;
 import com.alibaba.druid.sql.dialect.mysql.visitor.MySqlSchemaStatVisitor;
 import com.aliyun.opensearch.SearcherClient;
 import com.aliyun.opensearch.sdk.dependencies.org.json.JSONArray;
+import com.aliyun.opensearch.sdk.dependencies.org.json.JSONException;
 import com.aliyun.opensearch.sdk.dependencies.org.json.JSONObject;
 import com.aliyun.opensearch.sdk.generated.commons.OpenSearchClientException;
 import com.aliyun.opensearch.sdk.generated.commons.OpenSearchException;
@@ -20,12 +21,15 @@ import com.aliyun.opensearch.sdk.generated.search.general.SearchResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
  * 完成一次查询迭代
  * 默认查询迭代器实现
+ * 非线程安全
  * @see OpenSearchDqlException 所有方法均可能出现OpenSearchDqlException
  * @author dragons
  * @date 2020/12/23 18:29
@@ -47,10 +51,13 @@ public class DefaultSearcherClientQueryIterator extends AbstractSearcherClientQu
     private Sort sort;
     private DeepPaging deepPaging;
     private SearchQueryModeEnum queryMode = SearchQueryModeEnum.HIT;
-    private String result;
+    private SearchResult result;
     private int retry = 1;
     private long retryTimeInterval = 100L;
     private long pagingInterval = 100L;
+
+    private boolean alreadyExplain = false;
+    private JSONArray items = null;
 
     public DefaultSearcherClientQueryIterator(SearcherClient client, String sql) {
         super();
@@ -79,6 +86,10 @@ public class DefaultSearcherClientQueryIterator extends AbstractSearcherClientQu
         }
     }
 
+    /**
+     *
+     * @throws JSONException
+     */
     @Override
     public boolean hasNext() {
         int retry = this.retry;
@@ -110,6 +121,12 @@ public class DefaultSearcherClientQueryIterator extends AbstractSearcherClientQu
                 if (log.isDebugEnabled()) {
                     log.debug("SearchResult: {}", searchResult);
                 }
+                if (searchResult == null || searchResult.getResult() == null) {
+                    if (log.isErrorEnabled()) {
+                        log.error("search result is null" );
+                    }
+                    return false;
+                }
                 JSONObject resultJson = new JSONObject(searchResult.getResult());
                 String status = resultJson.getString(ResponseConstants.STATUS);
                 if (queryMode == SearchQueryModeEnum.SCROLL) {
@@ -123,8 +140,8 @@ public class DefaultSearcherClientQueryIterator extends AbstractSearcherClientQu
                             scrollId = resultJson.getJSONObject(ResponseConstants.RESULT).getString(ResponseConstants.SCROLLID);
                         } else {
                             deepPaging.setScrollId(null);
-                            if (log.isWarnEnabled()) {
-                                log.warn("scroll mode request fail, info: {}", searchResult.getResult());
+                            if (log.isErrorEnabled()) {
+                                log.error("scroll mode request fail, info: {}", searchResult.getResult());
                             }
                         }
                     }
@@ -133,16 +150,24 @@ public class DefaultSearcherClientQueryIterator extends AbstractSearcherClientQu
                 JSONArray items = resultJson.getJSONObject(ResponseConstants.RESULT).getJSONArray(ResponseConstants.RESULT_ITEMS);
                 if (ResponseConstants.STATUS_OK.equals(status)) {
                     if (items.length() > 0) {
-                        result = searchResult.getResult();
+                        result = searchResult;
                         if (queryMode == SearchQueryModeEnum.HIT) {
                             offset += num;
                         }
                         count -= num;
+                        // 重置状态
+                        reset();
                         return true;
+                    }
+                    if (log.isDebugEnabled()) {
+                        log.debug("search status is ok, but result length is zero");
                     }
                     return false;
                 }
             } catch (OpenSearchException | OpenSearchClientException e) {
+                if (log.isErrorEnabled()) {
+                    log.error("OpenSearch exception", e);
+                }
                 if (retry < 0) {
                     throw new OpenSearchDqlException(e);
                 }
@@ -155,18 +180,55 @@ public class DefaultSearcherClientQueryIterator extends AbstractSearcherClientQu
         return false;
     }
 
+    @Override
+    public boolean hasNextOne() {
+        return items != null && items.length() > 0 || hasNext();
+    }
+
     /**
      * Nullable
+     * @throws NullPointerException
      */
     @Override
-    public String next() {
+    public SearchResult next() {
+        waitPagingInterval();
+        SearchResult res = result;
+        result = null;
+        return res;
+    }
+
+    /**
+     * Nullable
+     * @throws NullPointerException
+     * @throws JSONException
+     */
+    @Override
+    public JSONObject nextOne() {
+        waitPagingInterval();
+        // 尚未解析
+        if ((items == null || items.length() == 0) && !alreadyExplain) {
+            items = (new JSONObject(result.getResult())).getJSONObject(ResponseConstants.RESULT).getJSONArray(ResponseConstants.RESULT_ITEMS);
+            alreadyExplain = true;
+        }
+        if (items == null || items.length() == 0) {
+            return null;
+        }
+        JSONObject item = items.getJSONObject(0).getJSONObject(Constants.FIELDS);
+        items.remove(0);
+        result = null;
+        return item;
+    }
+
+    private void waitPagingInterval() {
         try {
             Thread.sleep(pagingInterval);
         } catch (InterruptedException e) {
         }
-        String res = result;
-        result = null;
-        return res;
+    }
+
+    private void reset() {
+        alreadyExplain = false;
+        items = null;
     }
 
     public long getPagingInterval() {

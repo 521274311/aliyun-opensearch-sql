@@ -19,6 +19,7 @@ public interface Constants {
     String RIGHT_SMALL_BRACKET = ")";
     String INCREASE = "ASC";
     String DISTINCT = "DISTINCT";
+    String FIELDS = "fields";
     String COUNT_FUNCTION = "count";
     String MAX_FUNCTION = "max";
     String MIN_FUNCTION = "min";
