@@ -34,54 +34,6 @@ import java.util.*;
  */
 public class OpenSearchConverter {
 
-//    /**
-//     * 查询数小于等于5000
-//     * @param sql
-//     * @return
-//     */
-//    public static List<SearchParams> querySqlConvert(String sql) {
-//        SQLStatement statement = SQLUtils.parseSingleStatement(sql, Constants.MYSQL_DB_TYPE);
-//        MySqlSchemaStatVisitor visitor = new MySqlSchemaStatVisitor();
-//        statement.accept(visitor);
-//        MySqlSelectQueryBlock block = ((MySqlSelectQueryBlock)((SQLSelectStatement) statement).getSelect().getQuery());
-//        SQLLimit limit = block.getLimit();
-//        List<String> appNames = explainAppNames(visitor);
-//        Map<String, String> fetchFieldsAndAlias = explainFetchFieldsAndAlias(block);
-//        Tuple2<String, String> queryAndFilter = explainQueryAndFilter((SQLBinaryOpExpr) block.getWhere());
-//        Set<Distinct> distinctSet = explainDistinct(block);
-//        Set<Aggregate> aggregateSet = explainAggregate(block, visitor);
-//        Sort sort = explainSort(block);
-//        List<SearchParams> searchParamsList = new ArrayList<>();
-//        Tuple2<Integer, Integer> startAndHit = explainStartAndHit(limit);
-//        if (startAndHit.t1 + startAndHit.t2 <= Constants.MAX_ALL_HIT) {
-//            int start = startAndHit.t1;
-//            int hit = startAndHit.t2;
-//            Config config;
-//            while (hit >= Constants.MAX_ONE_HIT) {
-//                config = OpenSearchBuilderUtil.configBuilder()
-//                        .appNames(appNames)
-//                        .start(start)
-//                        .hits(hit)
-//                        .searchFormat(SearchFormat.FULLJSON)
-//                        .fetchFields(!fetchFieldsAndAlias.isEmpty() ?
-//                                new ArrayList<>(fetchFieldsAndAlias.keySet())
-//                                : null)
-//                        .build();
-//                searchParamsList.add(OpenSearchBuilderUtil.searchParamsBuilder(config, !Constants.EMPTY_STRING.equals(queryAndFilter.t1) ? queryAndFilter.t1 : null)
-//                        .filter(!Constants.EMPTY_STRING.equals(queryAndFilter.t2) ? queryAndFilter.t2 : null)
-//                        .sort(sort)
-//                        .distincts(!distinctSet.isEmpty() ? distinctSet : null)
-//                        .aggregates(!aggregateSet.isEmpty() ? aggregateSet : null)
-//                        .build());
-//                start += Constants.MAX_ONE_HIT;
-//                hit -= Constants.MAX_ONE_HIT;
-//            }
-//        } else {
-//
-//        }
-//        return searchParamsList;
-//    }
-
     public static List<String> explainAppNames(MySqlSchemaStatVisitor visitor) {
         Set<TableStat.Name> names = visitor.getTables().keySet();
         List<String> appNames = new ArrayList<>(names.size());
