@@ -169,6 +169,11 @@ public class OpenSearchConverter {
         }
         if (!(leftChildSqlExpr instanceof SQLBinaryOpExpr) || !(rightChildSqlExpr instanceof SQLBinaryOpExpr)) {
             if (leftChildSqlExpr instanceof SQLIdentifierExpr && Constants.EQUAL_SIGN.equalsIgnoreCase(expr.getOperator().name)) {
+                // 使用=比较运算符若比较值为数值类型则使用filter处理
+                if (rightChildSqlExpr instanceof SQLIntegerExpr || rightChildSqlExpr instanceof SQLNumberExpr) {
+                    return Tuple2.of(Constants.EMPTY_STRING, ((SQLIdentifierExpr) leftChildSqlExpr).getLowerName()
+                            + expr.getOperator().name + ((SQLValuableExpr) rightChildSqlExpr).getValue());
+                }
                 return Tuple2.of( ((SQLIdentifierExpr) leftChildSqlExpr).getLowerName()
                         + Constants.COLON_SINGLE_QUOTES + ((SQLValuableExpr) rightChildSqlExpr).getValue()
                         + Constants.SINGLE_QUOTES_SPACE, Constants.EMPTY_STRING);
