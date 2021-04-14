@@ -96,4 +96,5 @@ while (iterator.hasNextOne()) {
   2.4.默认使用 **scroll** 方式召回（ **scroll** 不支持 **distinct**, **aggregate** 语法; **sort** 语法仅支持 **int** 类型字段排序），若明确知道召回数小于等于 **5000**，则建议使用 **limit** 来触发 **hit** 方式召回。  
   2.5.暂不支持地理位置查询  
 #### 历史变更：  
-1.初始化版本**v0.0.1-SNAPSHOT**，提供默认的 **OpenSearch** 搜索迭代器  
+1. 初始化版本**v0.0.1-SNAPSHOT**，提供默认的 **OpenSearch** 搜索迭代器  
+2. 优化"="比较表达式在数值比较时使用filter处理
