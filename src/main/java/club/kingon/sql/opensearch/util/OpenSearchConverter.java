@@ -34,7 +34,7 @@ import java.util.*;
  */
 public class OpenSearchConverter {
 
-    public static List<String> explainAppNames(MySqlSchemaStatVisitor visitor) {
+    public static List<String> explainFrom(MySqlSchemaStatVisitor visitor) {
         Set<TableStat.Name> names = visitor.getTables().keySet();
         List<String> appNames = new ArrayList<>(names.size());
         names.forEach(n -> appNames.add(n.getName()));
@@ -78,6 +78,7 @@ public class OpenSearchConverter {
     }
 
     /**
+     * todo 别名提取
      * @return Map<index_name, alias_name>
      */
     public static Map<String, String> explainFetchFieldsAndAlias(MySqlSelectQueryBlock block) {
@@ -233,23 +234,23 @@ public class OpenSearchConverter {
      */
     public static Set<Aggregate> explainAggregate(MySqlSelectQueryBlock block, MySqlSchemaStatVisitor visitor) {
         Set<TableStat.Column> groupByColumns = visitor.getGroupByColumns();
+        Set<Aggregate> aggregateSet = new HashSet<>();
         List<SQLAggregateExpr> aggregateFunctions = visitor.getAggregateFunctions();
+        List<String> effectGroupByColumnNames = new ArrayList<>();
         Aggregate aggregate = null;
         // field
         if (groupByColumns != null && !groupByColumns.isEmpty()) {
             aggregate = new Aggregate();
-            StringBuilder groupKeyBuilder = new StringBuilder();
             for (TableStat.Column column : groupByColumns) {
-                groupKeyBuilder.append(column.getName()).append(";");
+                effectGroupByColumnNames.add(column.getName());
             }
-            aggregate.setGroupKey(groupKeyBuilder.substring(0, groupKeyBuilder.length() -1));
         }
+        StringBuilder aggFunBuilder = new StringBuilder();
         // group by
         if (aggregateFunctions != null && !aggregateFunctions.isEmpty()) {
             if (aggregate == null) {
                 throw new OpenSearchDqlException("AggFun must have groupKey.");
             }
-            StringBuilder aggFunBuilder = new StringBuilder();
             String aggFunName;
             List<SQLExpr> arguments;
             for (SQLAggregateExpr aggregateExpr : aggregateFunctions) {
@@ -281,12 +282,14 @@ public class OpenSearchConverter {
                         throw new OpenSearchDqlException("AggFun only allow to use count,sum,max,min. Your aggFun: " + aggFunName);
                 }
             }
-            aggregate.setAggFun(aggFunBuilder.substring(0, aggFunBuilder.length() - 1));
         }
-        // having
-        Set<Aggregate> aggregateSet = new HashSet<>();
-        if (aggregate != null) {
-            aggregateSet.add(aggregate);
+        if (!effectGroupByColumnNames.isEmpty() && aggFunBuilder.length() > 0) {
+            for (String effectGroupByColumnName : effectGroupByColumnNames) {
+                aggregateSet.add(new Aggregate() {{
+                    setGroupKey(effectGroupByColumnName);
+                    setAggFun(aggFunBuilder.substring(0, aggFunBuilder.length() - 1));
+                }});
+            }
         }
         return !aggregateSet.isEmpty() ? aggregateSet : null;
     }

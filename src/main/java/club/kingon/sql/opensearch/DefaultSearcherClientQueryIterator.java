@@ -65,7 +65,7 @@ public class DefaultSearcherClientQueryIterator extends AbstractSearcherClientQu
         MySqlSchemaStatVisitor visitor = new MySqlSchemaStatVisitor();
         statement.accept(visitor);
         MySqlSelectQueryBlock block = ((MySqlSelectQueryBlock)((SQLSelectStatement) statement).getSelect().getQuery());
-        appNames = OpenSearchConverter.explainAppNames(visitor);
+        appNames = OpenSearchConverter.explainFrom(visitor);
         fetchField = OpenSearchConverter.explainFetchField(block);
         Tuple2<String, String> queryAndFilter = OpenSearchConverter.explainQueryAndFilter((SQLBinaryOpExpr) block.getWhere());
         query = queryAndFilter.t1;
