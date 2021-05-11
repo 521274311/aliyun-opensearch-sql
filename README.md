@@ -98,3 +98,4 @@ while (iterator.hasNextOne()) {
 #### 历史变更：  
 1. 初始化版本**v0.0.1-SNAPSHOT**，提供默认的 **OpenSearch** 搜索迭代器  
 2. 优化"="比较表达式在数值比较时使用filter处理
+3. 修复Aggregate多分组时无法解析问题
