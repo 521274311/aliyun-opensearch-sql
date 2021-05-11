@@ -275,8 +275,7 @@ public class OpenSearchConverter {
                     case Constants.MAX_FUNCTION:
                     case Constants.MIN_FUNCTION:
                     case Constants.SUM_FUNCTION:
-                        aggFunBuilder.append(aggFunName).append(argumentName)
-                                .append(Constants.LEFT_SMALL_BRACKET)
+                        aggFunBuilder.append(aggFunName).append(Constants.LEFT_SMALL_BRACKET).append(argumentName)
                                 .append(Constants.RIGHT_SMALL_BRACKET).append("#"); break;
                     default:
                         throw new OpenSearchDqlException("AggFun only allow to use count,sum,max,min. Your aggFun: " + aggFunName);
