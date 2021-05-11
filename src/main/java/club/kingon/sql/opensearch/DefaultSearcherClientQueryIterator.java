@@ -21,9 +21,7 @@ import com.aliyun.opensearch.sdk.generated.search.general.SearchResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 /**
@@ -55,6 +53,7 @@ public class DefaultSearcherClientQueryIterator extends AbstractSearcherClientQu
     private int retry = 1;
     private long retryTimeInterval = 100L;
     private long pagingInterval = 100L;
+    private int batch = Constants.MAX_ONE_HIT;
 
     private boolean alreadyExplain = false;
     private JSONArray items = null;
@@ -99,7 +98,7 @@ public class DefaultSearcherClientQueryIterator extends AbstractSearcherClientQu
         if (count == 0) {
             return false;
         }
-        int num = count > Constants.MAX_ONE_HIT ? Constants.MAX_ONE_HIT : count;
+        int num = count > batch ? batch : count;
         OpenSearchBuilderUtil.SearchParamsBuilder searchParamsBuilder = OpenSearchBuilderUtil.searchParamsBuilder(
                 OpenSearchBuilderUtil.configBuilder(appNames, offset, num, fetchField).build(), query)
                 .filter(filter)
@@ -229,6 +228,14 @@ public class DefaultSearcherClientQueryIterator extends AbstractSearcherClientQu
     private void reset() {
         alreadyExplain = false;
         items = null;
+    }
+
+    public int getBatch() {
+        return batch;
+    }
+
+    public void setBatch(int batch) {
+        this.batch = batch;
     }
 
     public long getPagingInterval() {
