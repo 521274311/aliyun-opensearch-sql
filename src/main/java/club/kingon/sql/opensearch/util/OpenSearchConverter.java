@@ -11,6 +11,8 @@ import com.alibaba.druid.sql.dialect.mysql.ast.statement.MySqlSelectQueryBlock;
 import com.alibaba.druid.sql.dialect.mysql.visitor.MySqlSchemaStatVisitor;
 import com.alibaba.druid.stat.TableStat;
 import com.aliyun.opensearch.sdk.generated.search.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.*;
 
@@ -33,6 +35,8 @@ import java.util.*;
  * @date 2020/12/18 16:13
  */
 public class OpenSearchConverter {
+
+    private final static Logger log = LoggerFactory.getLogger(OpenSearchConverter.class);
 
     public static List<String> explainFrom(MySqlSchemaStatVisitor visitor) {
         Set<TableStat.Name> names = visitor.getTables().keySet();
@@ -69,11 +73,16 @@ public class OpenSearchConverter {
             return null;
         }
         List<String> result = new ArrayList<>();
-        sqlSelectItemList.forEach(x -> {
-            String fieldName = x.getExpr() instanceof SQLIdentifierExpr ? ((SQLIdentifierExpr)x.getExpr()).getLowerName()
-                    : ((SQLAggregateExpr) x.getExpr()).getMethodName().toLowerCase();
-            result.add(fieldName);
-        });
+        for (SQLSelectItem x : sqlSelectItemList) {
+            if (x.getExpr() instanceof SQLIdentifierExpr) {
+                result.add(((SQLIdentifierExpr) x.getExpr()).getLowerName());
+            } else if (x.getExpr() instanceof SQLAggregateExpr) {
+                result.add(((SQLAggregateExpr) x.getExpr()).getMethodName().toLowerCase());
+            } else if (x.getExpr() instanceof SQLAllColumnExpr) {
+                result.clear();
+                break;
+            }
+        }
         return result;
     }
 
@@ -190,40 +199,39 @@ public class OpenSearchConverter {
      * https://help.aliyun.com/document_detail/180073.html
      */
     public static Set<Distinct> explainDistinct(MySqlSelectQueryBlock block) {
-        boolean globelDistinct = block.getDistionOption() == 2;
+        // 检查distinct状态
+        if (block.getDistionOption() != 2) return null;
         Set<Distinct> distinctSet = new HashSet<>();
-        if (globelDistinct) {
-            if (block.getSelectList().size() != 1) {
-                throw new OpenSearchDqlException("OpenSearch distinct is used, the select field total only be one");
-            }
-            SQLExpr expr;
-            if (! ((expr = block.getSelectList().get(0).getExpr()) instanceof SQLIdentifierExpr)) {
-                throw new OpenSearchDqlException("OpenSearch distinct field must be attribute field");
-            }
-            distinctSet.add(new Distinct(((SQLIdentifierExpr) expr).getLowerName()) {{
-                setReserved(false);
-                setUpdateTotalHit(true);
-            }});
-        } else {
-            for (SQLSelectItem item : block.getSelectList()) {
-                SQLExpr expr = item.getExpr();
-                if (expr instanceof SQLAggregateExpr) {
-                    SQLAggregateOption option = ((SQLAggregateExpr) expr).getOption();
-                    if (option != null && Constants.DISTINCT.equalsIgnoreCase(option.name())) {
-                        List<SQLExpr> arguments = ((SQLAggregateExpr) expr).getArguments();
-                        if (arguments.size() != 1) {
-                            throw new OpenSearchDqlException("OpenSearch distinct is used, the select field total only be one");
+        for (SQLSelectItem item : block.getSelectList()) {
+            SQLExpr expr = item.getExpr();
+            if (expr instanceof SQLAggregateExpr) {
+                SQLAggregateOption option = ((SQLAggregateExpr) expr).getOption();
+                SQLExpr aggExpr;
+                if (option != null && Constants.DISTINCT.equalsIgnoreCase(option.name())) {
+                    List<SQLExpr> arguments = ((SQLAggregateExpr) expr).getArguments();
+                    if (arguments.size() > 1) {
+                        throw new OpenSearchDqlException("OpenSearch distinct is used, the select field total only less than one");
+                    }
+                    else if (arguments.size() == 1) {
+                        if ((aggExpr = arguments.get(0)) instanceof SQLIdentifierExpr) {
+                            distinctSet.add(new Distinct(((SQLIdentifierExpr) aggExpr).getLowerName()) {{
+                                setReserved(false);
+                                setUpdateTotalHit(true);
+                            }});
+                        } else {
+                            log.warn("distinct: exists illegal SQLExpr type => {}, and this will be ignored. only SQLIdentifierExpr type is allowed", expr.getClass().getSimpleName());
                         }
-                        if (! ((expr = arguments.get(0)) instanceof SQLIdentifierExpr)) {
-                            throw new OpenSearchDqlException("OpenSearch distinct field must be attribute field");
-                        }
-                        distinctSet.add(new Distinct(((SQLIdentifierExpr) expr).getLowerName()) {{
-                            setReserved(false);
-                            setUpdateTotalHit(true);
-                        }});
-                        break;
+                    } else {
+
                     }
                 }
+            } else if (expr instanceof SQLIdentifierExpr) {
+                distinctSet.add(new Distinct(((SQLIdentifierExpr) expr).getLowerName()) {{
+                    setReserved(false);
+                    setUpdateTotalHit(true);
+                }});
+            } else {
+                log.warn("distinct: exists illegal SQLExpr type => {}, and this will be ignored. only SQLIdentifierExpr type is allowed", expr.getClass().getSimpleName());
             }
         }
         return !distinctSet.isEmpty() ? distinctSet : null;
