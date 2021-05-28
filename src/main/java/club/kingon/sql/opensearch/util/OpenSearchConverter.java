@@ -158,7 +158,12 @@ public class OpenSearchConverter {
                                 + Constants.COLON_SINGLE_QUOTES + value + Constants.SINGLE_QUOTES_MARK,
                                 Constants.EMPTY_STRING);
                     }
-                }
+                } else if (Constants.EQUAL_SIGN.equals(expr.getOperator().name) || Constants.NE_EQUAL_SIGN.equals(expr.getOperator().name)
+                         || Constants.LESS_AND_GREATER.equals(expr.getOperator().name)) {
+                     String value = ((SQLCharExpr) rightChildSqlExpr).getText();
+                     return Tuple2.of(Constants.EMPTY_STRING, ((SQLIdentifierExpr) leftChildSqlExpr).getLowerName()
+                             + (Constants.LESS_AND_GREATER.equals(expr.getOperator().name) ? Constants.NE_EQUAL_SIGN : expr.getOperator().name) + Constants.DOUBLE_QUOTES_MARK + value + Constants.DOUBLE_QUOTES_MARK);
+                 }
             } else if (leftChildSqlExpr instanceof SQLIdentifierExpr &&
                     (rightChildSqlExpr instanceof SQLIntegerExpr || rightChildSqlExpr instanceof SQLNumberExpr)) {
                 return Tuple2.of(Constants.EMPTY_STRING, ((SQLIdentifierExpr) leftChildSqlExpr).getLowerName()

@@ -99,3 +99,12 @@ while (iterator.hasNextOne()) {
 1. 初始化版本**v0.0.1-SNAPSHOT**，提供默认的 **OpenSearch** 搜索迭代器  
 2. 优化"="比较表达式在数值比较时使用filter处理
 3. 修复Aggregate多分组时无法解析问题
+
+
+### 优化记录
+##### 2021-05-28
+1. 增强filter中中文不等于支持，使用示例如下：
+```sql
+selec * from APP_NAME where title!='咸鱼' 
+```
+其中要求title字段在Opensearch后台中添加为属性字段(目前字符类型支持属性字段的类型有: LITERAL)

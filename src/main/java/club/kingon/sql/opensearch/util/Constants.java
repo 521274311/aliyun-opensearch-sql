@@ -4,11 +4,14 @@ public interface Constants {
     String MYSQL_DB_TYPE = "mysql";
     String EMPTY_STRING = "";
     String EQUAL_SIGN = "=";
+    String NE_EQUAL_SIGN = "!=";
+    String LESS_AND_GREATER = "<>";
     String GREATER_SIGN = ">";
     String GREATER_EQUAL_SIGN = ">=";
     String LESS_SIGN = "<";
     String LESS_EQUAL_SIGN = "<=";
     String SINGLE_QUOTES_MARK = "'";
+    String DOUBLE_QUOTES_MARK = "\"";
     String COLON_MARK = ":";
     String SPACE_STRING = " ";
     char PERCENT_SIGN_CHARACTER = '%';
