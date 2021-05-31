@@ -4,7 +4,7 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>club.kingons.plugins</groupId>
+    <groupId>club.kingons.plugins.sql</groupId>
     <artifactId>aliyun-opensearch-sql</artifactId>
     <version>0.0.2-SNAPSHOT</version>
     <build>
@@ -48,15 +48,26 @@
     </dependencies>
 
     <distributionManagement>
+<!--        <repository>-->
+<!--            <id>rdc-releases</id>-->
+<!--            <name>release</name>-->
+<!--            <url>https://packages.aliyun.com/maven/repository/2046112-release-GWTKBh/</url>-->
+<!--        </repository>-->
+<!--        <snapshotRepository>-->
+<!--            <id>rdc-snapshots</id>-->
+<!--            <name>snapshots</name>-->
+<!--            <url>https://packages.aliyun.com/maven/repository/2046112-snapshot-XTrdfK/</url>-->
+<!--        </snapshotRepository>-->
         <repository>
-            <id>rdc-releases</id>
+            <id>release</id>
             <name>release</name>
-            <url>https://packages.aliyun.com/maven/repository/2046112-release-GWTKBh/</url>
+            <url>http://172.18.54.178:8996/repository/maven-releases/</url>
         </repository>
+
         <snapshotRepository>
-            <id>rdc-snapshots</id>
-            <name>snapshots</name>
-            <url>https://packages.aliyun.com/maven/repository/2046112-snapshot-XTrdfK/</url>
+            <id>snapshots</id>
+            <name>release</name>
+            <url>http://172.18.54.178:8996/repository/maven-snapshots/</url>
         </snapshotRepository>
     </distributionManagement>
 </project>
