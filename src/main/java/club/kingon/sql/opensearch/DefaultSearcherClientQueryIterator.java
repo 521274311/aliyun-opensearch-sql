@@ -146,8 +146,8 @@ public class DefaultSearcherClientQueryIterator extends AbstractSearcherClientQu
                     }
                     deepPaging.setScrollId(scrollId);
                 }
-                JSONArray items = resultJson.getJSONObject(ResponseConstants.RESULT).getJSONArray(ResponseConstants.RESULT_ITEMS);
                 if (ResponseConstants.STATUS_OK.equals(status)) {
+                    JSONArray items = resultJson.getJSONObject(ResponseConstants.RESULT).getJSONArray(ResponseConstants.RESULT_ITEMS);
                     if (items.length() > 0) {
                         result = searchResult;
                         if (queryMode == SearchQueryModeEnum.HIT) {
@@ -162,6 +162,9 @@ public class DefaultSearcherClientQueryIterator extends AbstractSearcherClientQu
                         log.debug("search status is ok, but result length is zero");
                     }
                     return false;
+                }
+                if (log.isDebugEnabled()) {
+                    log.debug("search status is fail, info: {}", searchResult.getResult());
                 }
             } catch (OpenSearchException | OpenSearchClientException e) {
                 if (log.isErrorEnabled()) {
