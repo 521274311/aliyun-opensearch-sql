@@ -147,6 +147,11 @@ public class DefaultSearcherClientQueryIterator extends AbstractSearcherClientQu
                     deepPaging.setScrollId(scrollId);
                 }
                 if (ResponseConstants.STATUS_OK.equals(status)) {
+                    if (!resultJson.has(ResponseConstants.RESULT)) {
+                        if (log.isDebugEnabled()) {
+                            log.debug("status is ok, but hasnot result param. info: {}", searchResult.getResult());
+                        }
+                    }
                     JSONArray items = resultJson.getJSONObject(ResponseConstants.RESULT).getJSONArray(ResponseConstants.RESULT_ITEMS);
                     if (items.length() > 0) {
                         result = searchResult;
