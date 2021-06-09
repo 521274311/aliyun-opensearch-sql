@@ -107,4 +107,5 @@ while (iterator.hasNextOne()) {
 ```sql
 selec * from APP_NAME where title!='咸鱼' 
 ```
+(PS: 使用!=与<>均可表示不等于)
 其中要求title字段在Opensearch后台中添加为属性字段(目前字符类型支持属性字段的类型有: LITERAL)
