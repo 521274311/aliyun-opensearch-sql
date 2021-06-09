@@ -47,6 +47,8 @@ from app_name
 where uid >= 1 and uid <= 1000 and name like 'dragons%' and age = 18
 ```
 
+(**PS: 想要触发query查询使用name like '%xxx%' 或 name="xxx" 均可**)
+
 #### 普通字段去重查询示例
 ```
 select distinct uid
