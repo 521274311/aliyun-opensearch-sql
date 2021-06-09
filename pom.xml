@@ -48,26 +48,15 @@
     </dependencies>
 
     <distributionManagement>
-<!--        <repository>-->
-<!--            <id>rdc-releases</id>-->
-<!--            <name>release</name>-->
-<!--            <url>https://packages.aliyun.com/maven/repository/2046112-release-GWTKBh/</url>-->
-<!--        </repository>-->
-<!--        <snapshotRepository>-->
-<!--            <id>rdc-snapshots</id>-->
-<!--            <name>snapshots</name>-->
-<!--            <url>https://packages.aliyun.com/maven/repository/2046112-snapshot-XTrdfK/</url>-->
-<!--        </snapshotRepository>-->
         <repository>
-            <id>release</id>
+            <id>rdc-releases</id>
             <name>release</name>
-            <url>http://172.18.54.178:8996/repository/maven-releases/</url>
+            <url>https://packages.aliyun.com/maven/repository/2046112-release-GWTKBh/</url>
         </repository>
-
         <snapshotRepository>
-            <id>snapshots</id>
-            <name>release</name>
-            <url>http://172.18.54.178:8996/repository/maven-snapshots/</url>
+            <id>rdc-snapshots</id>
+            <name>snapshots</name>
+            <url>https://packages.aliyun.com/maven/repository/2046112-snapshot-XTrdfK/</url>
         </snapshotRepository>
     </distributionManagement>
 </project>
