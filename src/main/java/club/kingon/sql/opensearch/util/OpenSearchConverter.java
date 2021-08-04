@@ -130,44 +130,46 @@ public class OpenSearchConverter {
             return Tuple2.of(Constants.EMPTY_STRING, Constants.EMPTY_STRING);
         }
         if (!(leftChildSqlExpr instanceof SQLBinaryOpExpr) || !(rightChildSqlExpr instanceof SQLBinaryOpExpr)) {
-            if (leftChildSqlExpr instanceof SQLIdentifierExpr && Constants.EQUAL_SIGN.equalsIgnoreCase(expr.getOperator().name)) {
-                // 使用=比较运算符若比较值为数值类型则使用filter处理
-                if (rightChildSqlExpr instanceof SQLIntegerExpr || rightChildSqlExpr instanceof SQLNumberExpr) {
-                    return Tuple2.of(Constants.EMPTY_STRING, ((SQLIdentifierExpr) leftChildSqlExpr).getLowerName()
+            if (leftChildSqlExpr instanceof SQLIdentifierExpr || leftChildSqlExpr instanceof SQLDefaultExpr) {
+                String leftName = leftChildSqlExpr instanceof SQLIdentifierExpr ? ((SQLIdentifierExpr) leftChildSqlExpr).getLowerName() : "default";
+                if (Constants.EQUAL_SIGN.equalsIgnoreCase(expr.getOperator().name)) {
+                    // 使用=比较运算符若比较值为数值类型则使用filter处理
+                    if (rightChildSqlExpr instanceof SQLIntegerExpr || rightChildSqlExpr instanceof SQLNumberExpr) {
+                        return Tuple2.of(Constants.EMPTY_STRING, leftName
                             + expr.getOperator().name + ((SQLValuableExpr) rightChildSqlExpr).getValue());
-                }
-                return Tuple2.of( ((SQLIdentifierExpr) leftChildSqlExpr).getLowerName()
+                    }
+                    return Tuple2.of( leftName
                         + Constants.COLON_SINGLE_QUOTES + ((SQLValuableExpr) rightChildSqlExpr).getValue()
                         + Constants.SINGLE_QUOTES_SPACE, Constants.EMPTY_STRING);
-            }
-            else if (leftChildSqlExpr instanceof SQLIdentifierExpr && rightChildSqlExpr instanceof SQLCharExpr) {
-                 if (Constants.LIKE.equalsIgnoreCase(expr.getOperator().name)) {
-                    String value = (String) ((SQLCharExpr) rightChildSqlExpr).getValue();
-                    if (value != null && !value.isEmpty()) {
-                        if (value.charAt(0) != Constants.PERCENT_SIGN_CHARACTER) {
-                            value = Constants.HEAD_TERMINATOR + value;
-                        } else {
-                            value = value.substring(1);
-                        }
-                        if (value.charAt(value.length() - 1) != Constants.PERCENT_SIGN_CHARACTER) {
-                            value = value + Constants.TAIL_TERMINATOR;
-                        } else {
-                            value = value.substring(0, value.length() - 1);
-                        }
-                        return Tuple2.of(((SQLIdentifierExpr) leftChildSqlExpr).getLowerName()
-                                + Constants.COLON_SINGLE_QUOTES + value + Constants.SINGLE_QUOTES_MARK,
+                }
+                else if (rightChildSqlExpr instanceof SQLCharExpr) {
+                    if (Constants.LIKE.equalsIgnoreCase(expr.getOperator().name)) {
+                        String value = (String) ((SQLCharExpr) rightChildSqlExpr).getValue();
+                        if (value != null && !value.isEmpty()) {
+                            if (value.charAt(0) != Constants.PERCENT_SIGN_CHARACTER) {
+                                value = Constants.HEAD_TERMINATOR + value;
+                            } else {
+                                value = value.substring(1);
+                            }
+                            if (value.charAt(value.length() - 1) != Constants.PERCENT_SIGN_CHARACTER) {
+                                value = value + Constants.TAIL_TERMINATOR;
+                            } else {
+                                value = value.substring(0, value.length() - 1);
+                            }
+                            return Tuple2.of(leftName
+                                    + Constants.COLON_SINGLE_QUOTES + value + Constants.SINGLE_QUOTES_MARK,
                                 Constants.EMPTY_STRING);
+                        }
+                    } else if (Constants.EQUAL_SIGN.equals(expr.getOperator().name) || Constants.NE_EQUAL_SIGN.equals(expr.getOperator().name)
+                        || Constants.LESS_AND_GREATER.equals(expr.getOperator().name)) {
+                        String value = ((SQLCharExpr) rightChildSqlExpr).getText();
+                        return Tuple2.of(Constants.EMPTY_STRING, leftName
+                            + (Constants.LESS_AND_GREATER.equals(expr.getOperator().name) ? Constants.NE_EQUAL_SIGN : expr.getOperator().name) + Constants.DOUBLE_QUOTES_MARK + value + Constants.DOUBLE_QUOTES_MARK);
                     }
-                } else if (Constants.EQUAL_SIGN.equals(expr.getOperator().name) || Constants.NE_EQUAL_SIGN.equals(expr.getOperator().name)
-                         || Constants.LESS_AND_GREATER.equals(expr.getOperator().name)) {
-                     String value = ((SQLCharExpr) rightChildSqlExpr).getText();
-                     return Tuple2.of(Constants.EMPTY_STRING, ((SQLIdentifierExpr) leftChildSqlExpr).getLowerName()
-                             + (Constants.LESS_AND_GREATER.equals(expr.getOperator().name) ? Constants.NE_EQUAL_SIGN : expr.getOperator().name) + Constants.DOUBLE_QUOTES_MARK + value + Constants.DOUBLE_QUOTES_MARK);
-                 }
-            } else if (leftChildSqlExpr instanceof SQLIdentifierExpr &&
-                    (rightChildSqlExpr instanceof SQLIntegerExpr || rightChildSqlExpr instanceof SQLNumberExpr)) {
-                return Tuple2.of(Constants.EMPTY_STRING, ((SQLIdentifierExpr) leftChildSqlExpr).getLowerName()
+                } else if (rightChildSqlExpr instanceof SQLIntegerExpr || rightChildSqlExpr instanceof SQLNumberExpr) {
+                    return Tuple2.of(Constants.EMPTY_STRING, leftName
                         + expr.getOperator().name + ((SQLValuableExpr) rightChildSqlExpr).getValue());
+                }
             }
         } else {
             Tuple2<String, String> leftTp = getQueryAndFilter((SQLBinaryOpExpr) leftChildSqlExpr);
