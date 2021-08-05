@@ -1,7 +1,25 @@
 package club.kingon.sql.opensearch.util;
 
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
+
 public interface Constants {
     String MYSQL_DB_TYPE = "mysql";
+    String QUERY_PROCESSOR_NAMES = "qp";
+    String DEFAULT_FIRST_RANK_NAME = "first_rank_name";
+    String DEFAULT_SECOND_RANK_NAME = "second_rank_name";
+    String DEFAULT_RE_RANK_SIZE_NAME = "re_rank_size";
+
+    Set<String> FIRST_RANK_NAMES = new HashSet<>(Arrays.asList(DEFAULT_FIRST_RANK_NAME, "firstrankname"));
+    Set<String> SECOND_RANK_NAMES = new HashSet<>(Arrays.asList(DEFAULT_SECOND_RANK_NAME, "secondrankname"));
+    Set<String> RE_RANK_SIZE_NAMES = new HashSet<>(Arrays.asList(DEFAULT_RE_RANK_SIZE_NAME, "reranksize"));
+    Set<String> INNER_PARAM_NAMES = new HashSet<String>() {{
+        add(QUERY_PROCESSOR_NAMES);
+        addAll(FIRST_RANK_NAMES);
+        addAll(SECOND_RANK_NAMES);
+        addAll(RE_RANK_SIZE_NAMES);
+    }};
     String EMPTY_STRING = "";
     String EQUAL_SIGN = "=";
     String NE_EQUAL_SIGN = "!=";
@@ -27,6 +45,8 @@ public interface Constants {
     String MAX_FUNCTION = "max";
     String MIN_FUNCTION = "min";
     String SUM_FUNCTION = "sum";
+    String IN = "in";
+    String NOTIN = "notin";
     int MIN_ONE_START = 0;
     int MAX_ONE_HIT = 500;
     int MAX_ALL_HIT = 5000;

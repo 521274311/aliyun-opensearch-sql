@@ -22,6 +22,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -37,16 +38,16 @@ public class DefaultSearcherClientQueryIterator extends AbstractSearcherClientQu
 
     private final static Logger log = LoggerFactory.getLogger(DefaultSearcherClientQueryIterator.class);
 
-    private SearcherClient searcherClient;
-    private List<String> appNames;
+    private final SearcherClient searcherClient;
+    private final List<String> appNames;
     private int offset;
     private int count;
-    private List<String> fetchField;
-    private String query;
-    private String filter;
-    private Set<Distinct> distincts;
-    private Set<Aggregate> aggregates;
-    private Sort sort;
+    private final List<String> fetchField;
+    private final String query;
+    private final String filter;
+    private final Set<Distinct> distincts;
+    private final Set<Aggregate> aggregates;
+    private final Sort sort;
     private DeepPaging deepPaging;
     private SearchQueryModeEnum queryMode = SearchQueryModeEnum.HIT;
     private SearchResult result;
@@ -54,6 +55,8 @@ public class DefaultSearcherClientQueryIterator extends AbstractSearcherClientQu
     private long retryTimeInterval = 100L;
     private long pagingInterval = 100L;
     private int batch = Constants.MAX_ONE_HIT;
+    private final List<String> queryProcessorNames;
+    private final Rank rank;
 
     private boolean alreadyExplain = false;
     private JSONArray items = null;
@@ -67,9 +70,11 @@ public class DefaultSearcherClientQueryIterator extends AbstractSearcherClientQu
         MySqlSelectQueryBlock block = ((MySqlSelectQueryBlock)((SQLSelectStatement) statement).getSelect().getQuery());
         appNames = OpenSearchConverter.explainFrom(visitor);
         fetchField = OpenSearchConverter.explainFetchField(block);
-        Tuple2<String, String> queryAndFilter = OpenSearchConverter.explainQueryAndFilter((SQLBinaryOpExpr) block.getWhere());
-        query = queryAndFilter.t1;
-        filter = queryAndFilter.t2;
+        Tuple2<Tuple2<String, String>, Map<String, Object>> queryAndFilterAndParams = OpenSearchConverter.explainWhere(block.getWhere());
+        query = queryAndFilterAndParams.t1.t1;
+        filter = queryAndFilterAndParams.t1.t2;
+        queryProcessorNames = (List<String>) queryAndFilterAndParams.t2.get(Constants.QUERY_PROCESSOR_NAMES);
+        rank = OpenSearchConverter.expainRank(queryAndFilterAndParams.t2);
         distincts = OpenSearchConverter.explainDistinct(block);
         aggregates = OpenSearchConverter.explainAggregate(block, visitor);
         sort = OpenSearchConverter.explainSort(block);
@@ -102,6 +107,10 @@ public class DefaultSearcherClientQueryIterator extends AbstractSearcherClientQu
         OpenSearchBuilderUtil.SearchParamsBuilder searchParamsBuilder = OpenSearchBuilderUtil.searchParamsBuilder(
                 OpenSearchBuilderUtil.configBuilder(appNames, offset, num, fetchField).build(), query)
                 .filter(filter)
+                // 支持设置qp
+                .queryProcessorNames(queryProcessorNames)
+                // 支持粗排、精排表达式
+                .rank(rank)
                 .sort(sort);
         while (retry-- >= 0) {
             try {
