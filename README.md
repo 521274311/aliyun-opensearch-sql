@@ -102,7 +102,7 @@ while (iterator.hasNextOne()) {
 }  
 ```
 #### 实战(常见问题汇总)
-```sql
+```
 1.like 语法比价的值若不是OpenSearch模糊搜索索引左右需均带上%,即使是关键词索引需要精确匹配两边也需带上%。OpenSearch模糊查询文档：https://help.aliyun.com/document_detail/179439.html
 select *
 from app_name
@@ -175,7 +175,7 @@ where default like '%咸鱼%';
 ### 优化记录
 ##### 2021-08-05
 1. 要求显示声明query与filter, query通过"like"方式, 其他表达式均为filter, 示例如下:
-```sql
+```
 filter示例-内部使用语法：filter=unique_id=1
 select *
 from app_name
