@@ -162,7 +162,7 @@ where default like '%咸鱼%';
 1. 目前仅支持查询功能  
 2. 当前支持语法  
   2.1. 仅支持4种聚合函数：**count**，**min**，**max**，**sum**  
-  2.2. **select** 仅支持查询字段，暂不支持别名功能（聚合函数不支持嵌套，使用聚合函数必须要分组，暂不支持having语法，参考：https://help.aliyun.com/document_detail/180049.html）。  
+  2.2. **select** 仅支持查询字段，暂不支持别名功能（聚合函数不支持嵌套，使用聚合函数必须要分组，暂不支持having语法，参考：<a href="https://help.aliyun.com/document_detail/180049.html">aggregate字句</a>。  
   2.3. **where** 中暂不支持 **in** 语法以及嵌套查询（目前支持 **=**, **>=**, **<=**, **<**, **>**, **like**, **!=**, **<>**），PS：比较运算符暂时仅通过 **filter** 实现，**range** 实现正在开发中。  
   2.4. 默认使用 **scroll** 方式召回（ **scroll** 不支持 **distinct**, **aggregate** 语法; **sort** 语法仅支持 **int** 类型字段排序），若明确知道召回数小于等于 **5000**，则建议使用 **limit** 来触发 **hit** 方式召回。  
   2.5. 暂不支持地理位置查询  
