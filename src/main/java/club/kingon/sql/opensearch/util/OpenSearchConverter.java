@@ -107,13 +107,13 @@ public class OpenSearchConverter {
         return result;
     }
 
-    public static Tuple2<String, String> explainQueryAndFilter(SQLBinaryOpExpr expr) {
-        Tuple2<String, String> queryAndFilter = getQueryAndFilter(expr);
-        if ("".equals(queryAndFilter.t1)) {
-            queryAndFilter.t1 = null;
+    public static Tuple2<Tuple2<String, String>, Map<String, Object>> explainWhere(SQLExpr expr) {
+        Tuple2<Tuple2<String, String>, Map<String, Object>> queryAndFilter = (Tuple2<Tuple2<String, String>, Map<String, Object>>) resolveQueryAndFilterSQLExpr(expr, true);
+        if ("".equals(queryAndFilter.t1.t1)) {
+            queryAndFilter.t1.t1 = null;
         }
-        if ("".equals(queryAndFilter.t2)) {
-            queryAndFilter.t2 = null;
+        if ("".equals(queryAndFilter.t1.t2)) {
+            queryAndFilter.t1.t2 = null;
         }
         return queryAndFilter;
     }
@@ -125,10 +125,10 @@ public class OpenSearchConverter {
      * 下钻一级递归提取query和filter
      * @return Tuple2<query, filter>
      */
-    private static Tuple2<String, String> getQueryAndFilter(SQLBinaryOpExpr expr) {
+    private static Tuple2<Tuple2<String, String>, Map<String, Object>> getQueryAndFilter(SQLBinaryOpExpr expr) {
         SQLExpr leftChildSqlExpr = null, rightChildSqlExpr = null;
         if (expr == null || ((leftChildSqlExpr = expr.getLeft()) == null & (rightChildSqlExpr = expr.getRight()) == null)) {
-            return Tuple2.of(Constants.EMPTY_STRING, Constants.EMPTY_STRING);
+            return Tuple2.of(Tuple2.of(Constants.EMPTY_STRING, Constants.EMPTY_STRING), Collections.emptyMap());
         }
         boolean leftOp, rightOp;
         String opName = getQueryAndFilterBinaryOperatorName(expr.getOperator());
@@ -154,11 +154,11 @@ public class OpenSearchConverter {
                     } else {
                         value = value.substring(0, value.length() - 1);
                     }
-                    return Tuple2.of(left
+                    return Tuple2.of(Tuple2.of(left
                             + Constants.COLON_SINGLE_QUOTES + value + Constants.SINGLE_QUOTES_MARK,
-                        Constants.EMPTY_STRING);
+                        Constants.EMPTY_STRING), Collections.emptyMap());
                 }
-                return Tuple2.of(Constants.EMPTY_STRING, Constants.EMPTY_STRING);
+                return Tuple2.of(Tuple2.of(Constants.EMPTY_STRING, Constants.EMPTY_STRING), Collections.emptyMap());
             }
             // 其他表达式统一使用filter
             else {
@@ -166,27 +166,27 @@ public class OpenSearchConverter {
                 if (rightChildSqlExpr instanceof SQLTextLiteralExpr) {
                     value = Constants.DOUBLE_QUOTES_MARK + value + Constants.DOUBLE_QUOTES_MARK;
                 }
-                return Tuple2.of(Constants.EMPTY_STRING, left + opName + value);
+                return Tuple2.of(Tuple2.of(Constants.EMPTY_STRING, left + opName + value), Collections.emptyMap());
             }
         }
         else if (leftOp && rightOp){
-            Tuple2<String, String> left = (Tuple2<String, String>) resolveQueryAndFilterSQLExpr(leftChildSqlExpr, true);
-            Tuple2<String, String> right = (Tuple2<String, String>) resolveQueryAndFilterSQLExpr(rightChildSqlExpr, true);
+            Tuple2<Tuple2<String, String>, Map<String, Object>> left = (Tuple2<Tuple2<String, String>, Map<String, Object>>) resolveQueryAndFilterSQLExpr(leftChildSqlExpr, true);
+            Tuple2<Tuple2<String, String>, Map<String, Object>> right = (Tuple2<Tuple2<String, String>, Map<String, Object>>) resolveQueryAndFilterSQLExpr(rightChildSqlExpr, true);
             return mergeQueryAndFilter(left, right, opName);
         }
         // 复合表达式仅支持filter
         else if (leftOp) {
-            Tuple2<String, String> left = (Tuple2<String, String>) resolveQueryAndFilterSQLExpr(leftChildSqlExpr, true);
+            Tuple2<Tuple2<String, String>, Map<String, Object>> left = (Tuple2<Tuple2<String, String>, Map<String, Object>>) resolveQueryAndFilterSQLExpr(leftChildSqlExpr, true);
             String right = getFilterValue(rightChildSqlExpr);
-            if (!Constants.EMPTY_STRING.equals(left.t2)) {
-                left.t2 = left.t2 + opName + right;
+            if (!Constants.EMPTY_STRING.equals(left.t1.t2)) {
+                left.t1.t2 = left.t1.t2 + opName + right;
             }
             return left;
         } else {
             Object left = resolveQueryAndFilterSQLExpr(leftChildSqlExpr, false);
-            Tuple2<String, String> right = (Tuple2<String, String>) resolveQueryAndFilterSQLExpr(rightChildSqlExpr, true);
-            if (!Constants.EMPTY_STRING.equals(right.t2)) {
-                right.t2 = left +opName + right.t2;
+            Tuple2<Tuple2<String, String>, Map<String, Object>> right = (Tuple2<Tuple2<String, String>, Map<String, Object>>) resolveQueryAndFilterSQLExpr(rightChildSqlExpr, true);
+            if (!Constants.EMPTY_STRING.equals(right.t1.t2)) {
+                right.t1.t2 = left +opName + right.t1.t2;
             }
             return right;
         }
@@ -249,15 +249,27 @@ public class OpenSearchConverter {
         return expr.toString().replace("'", "\"");
     }
 
-    private static Tuple2<String, String> getQueryAndFilter(SQLBetweenExpr expr) {
+    private static Tuple2<Tuple2<String, String>, Map<String, Object>> getQueryAndFilter(SQLBetweenExpr expr) {
         SQLExpr textExpr = expr.testExpr;
-        return Tuple2.of(Constants.EMPTY_STRING, ((SQLIdentifierExpr) textExpr).getLowerName() + ":["
-            + ((SQLValuableExpr) expr.beginExpr).getValue() + "," + ((SQLValuableExpr) expr.endExpr).getValue() + "]");
+        return Tuple2.of(Tuple2.of(Constants.EMPTY_STRING, ((SQLIdentifierExpr) textExpr).getLowerName() + ":["
+            + ((SQLValuableExpr) expr.beginExpr).getValue() + "," + ((SQLValuableExpr) expr.endExpr).getValue() + "]"), Collections.emptyMap());
     }
 
-    private static Tuple2<String, String> getQueryAndFilter(SQLInListExpr expr) {
-        String exp = expr.isNot() ? "notin" : "in";
+    private static Tuple2<Tuple2<String, String>, Map<String, Object>> getQueryAndFilter(SQLInListExpr expr) {
+        String exp = expr.isNot() ? Constants.NOTIN : Constants.IN;
         Object name = expr.getExpr() instanceof SQLIdentifierExpr ? ((SQLIdentifierExpr)expr.getExpr()).getLowerName() : resolveQueryAndFilterSQLExpr(expr.getExpr());
+        // 檢查qp是否在in中
+        if (Constants.IN.equals(exp) && Constants.QUERY_PROCESSOR_NAMES.equals(name)) {
+            Map<String, Object> mp = new HashMap<>();
+            List<String> qpNames = new ArrayList<>();
+            expr.getTargetList().forEach(e -> {
+                if (e instanceof SQLValuableExpr) {
+                    qpNames.add(((SQLValuableExpr) e).getValue().toString());
+                }
+            });
+            mp.put("qp", qpNames);
+            return Tuple2.of(Tuple2.of(Constants.EMPTY_STRING, Constants.EMPTY_STRING), mp);
+        }
         StringBuilder builder = new StringBuilder(exp + "(" + name + ", \"");
         for (int i = 0; i < expr.getTargetList().size(); i++) {
             if (i > 0) builder.append("|");
@@ -266,7 +278,7 @@ public class OpenSearchConverter {
             }
         }
         builder.append("\")");
-        return Tuple2.of(Constants.EMPTY_STRING, builder.toString());
+        return Tuple2.of(Tuple2.of(Constants.EMPTY_STRING, builder.toString()), Collections.emptyMap());
     }
 
     private static String getFilterValue(SQLExpr expr) {
@@ -285,31 +297,42 @@ public class OpenSearchConverter {
         return op.name;
     }
 
-    private static Tuple2<String, String> mergeQueryAndFilter(Tuple2<String, String> leftTp, Tuple2<String, String> rightTp, String operatorName) {
+    private static Tuple2<Tuple2<String, String>, Map<String, Object>> mergeQueryAndFilter(Tuple2<Tuple2<String, String>, Map<String, Object>> leftTp, Tuple2<Tuple2<String, String>, Map<String, Object>> rightTp, String operatorName) {
         StringBuilder query = new StringBuilder(), filter = new StringBuilder();
-        if (!Constants.EMPTY_STRING.equals(leftTp.t1)) {
-            query.append(leftTp.t1);
+        if (!Constants.EMPTY_STRING.equals(leftTp.t1.t1)) {
+            query.append(leftTp.t1.t1);
         }
-        if (!Constants.EMPTY_STRING.equals(leftTp.t2)) {
-            filter.append(leftTp.t2);
+        if (!Constants.EMPTY_STRING.equals(leftTp.t1.t2)) {
+            filter.append(leftTp.t1.t2);
         }
-        if (!Constants.EMPTY_STRING.equals(rightTp.t1)) {
+        if (!Constants.EMPTY_STRING.equals(rightTp.t1.t1)) {
             if (query.length() > 0) {
                 query.insert(0, Constants.SPACE_LEFT_SMALL_BRACKET).append(Constants.SPACE_STRING).append(operatorName).append(Constants.SPACE_STRING)
-                    .append(rightTp.t1).append(Constants.RIGHT_SMALL_BRACKET_SPACE);
+                    .append(rightTp.t1.t1).append(Constants.RIGHT_SMALL_BRACKET_SPACE);
             } else {
-                query.append(rightTp.t1);
+                query.append(rightTp.t1.t1);
             }
         }
-        if (!Constants.EMPTY_STRING.equals(rightTp.t2)) {
+        if (!Constants.EMPTY_STRING.equals(rightTp.t1.t2)) {
             if (filter.length() > 0) {
                 filter.insert(0, Constants.SPACE_LEFT_SMALL_BRACKET).append(Constants.SPACE_STRING).append(operatorName).append(Constants.SPACE_STRING)
-                    .append(rightTp.t2).append(Constants.RIGHT_SMALL_BRACKET_SPACE);
+                    .append(rightTp.t1.t2).append(Constants.RIGHT_SMALL_BRACKET_SPACE);
             } else {
-                filter.append(rightTp.t2);
+                filter.append(rightTp.t1.t2);
             }
         }
-        return Tuple2.of(query.toString(), filter.toString());
+        Map<String, Object> map;
+        if (leftTp.t2.isEmpty() && rightTp.t2.isEmpty()) {
+            map = Collections.emptyMap();
+        } else if (!leftTp.t2.isEmpty() && !rightTp.t2.isEmpty()) {
+            map = new HashMap<>(leftTp.t2);
+            map.putAll(rightTp.t2);
+        } else if (!leftTp.t2.isEmpty()) {
+            map = leftTp.t2;
+        } else {
+            map = rightTp.t2;
+        }
+        return Tuple2.of(Tuple2.of(query.toString(), filter.toString()), map);
     }
     /**
      * https://help.aliyun.com/document_detail/180073.html

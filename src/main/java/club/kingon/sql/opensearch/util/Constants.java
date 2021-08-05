@@ -2,6 +2,7 @@ package club.kingon.sql.opensearch.util;
 
 public interface Constants {
     String MYSQL_DB_TYPE = "mysql";
+    String QUERY_PROCESSOR_NAMES = "qp";
     String EMPTY_STRING = "";
     String EQUAL_SIGN = "=";
     String NE_EQUAL_SIGN = "!=";
@@ -27,6 +28,8 @@ public interface Constants {
     String MAX_FUNCTION = "max";
     String MIN_FUNCTION = "min";
     String SUM_FUNCTION = "sum";
+    String IN = "in";
+    String NOTIN = "notin";
     int MIN_ONE_START = 0;
     int MAX_ONE_HIT = 500;
     int MAX_ALL_HIT = 5000;

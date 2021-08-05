@@ -153,7 +153,13 @@ select *
 from app_name
 where default like '%咸鱼%';
 ```
-4. 转换器内部结构优化
+4. 增加查询分析qp参数in语法支持, 示例如下:
+```
+select *
+from app_name
+where name like '%dragons%' and qp in ('sys_default')
+```
+5. 转换器内部结构优化
 
 <font style="font-weight: 700" color="red">PS: 新版本使用"="需要注意名称是否为属性名称(若不是则会导致查询失败, 旧版本使用"=" + 动态探测类型可能会注入query中, 新版本将"="改为"like"注入进query中, 旧版本使用"="注入进filter中则不用处理)
 </font>

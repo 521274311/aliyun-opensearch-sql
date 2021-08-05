@@ -22,6 +22,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -54,6 +55,7 @@ public class DefaultSearcherClientQueryIterator extends AbstractSearcherClientQu
     private long retryTimeInterval = 100L;
     private long pagingInterval = 100L;
     private int batch = Constants.MAX_ONE_HIT;
+    private List<String> queryProcessorNames;
 
     private boolean alreadyExplain = false;
     private JSONArray items = null;
@@ -67,9 +69,10 @@ public class DefaultSearcherClientQueryIterator extends AbstractSearcherClientQu
         MySqlSelectQueryBlock block = ((MySqlSelectQueryBlock)((SQLSelectStatement) statement).getSelect().getQuery());
         appNames = OpenSearchConverter.explainFrom(visitor);
         fetchField = OpenSearchConverter.explainFetchField(block);
-        Tuple2<String, String> queryAndFilter = OpenSearchConverter.explainQueryAndFilter((SQLBinaryOpExpr) block.getWhere());
-        query = queryAndFilter.t1;
-        filter = queryAndFilter.t2;
+        Tuple2<Tuple2<String, String>, Map<String, Object>> queryAndFilterAndParams = OpenSearchConverter.explainWhere(block.getWhere());
+        query = queryAndFilterAndParams.t1.t1;
+        filter = queryAndFilterAndParams.t1.t2;
+        queryProcessorNames = (List<String>) queryAndFilterAndParams.t2.get("qp");
         distincts = OpenSearchConverter.explainDistinct(block);
         aggregates = OpenSearchConverter.explainAggregate(block, visitor);
         sort = OpenSearchConverter.explainSort(block);
@@ -102,6 +105,8 @@ public class DefaultSearcherClientQueryIterator extends AbstractSearcherClientQu
         OpenSearchBuilderUtil.SearchParamsBuilder searchParamsBuilder = OpenSearchBuilderUtil.searchParamsBuilder(
                 OpenSearchBuilderUtil.configBuilder(appNames, offset, num, fetchField).build(), query)
                 .filter(filter)
+                // 支持设置qp
+                .queryProcessorNames(queryProcessorNames)
                 .sort(sort);
         while (retry-- >= 0) {
             try {
