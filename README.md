@@ -131,7 +131,7 @@ query=kname:'dragons' OR id:'1'
 ```
 
 #### 当前版本: v0.0.3-SNAPSHOT
-
+#### 当前版本支持：
 1. 在v0.0.2-SNAPSHOT版本上,剔除了动态选择query与filter功能(防止判错导致查询失败), 转而使用强类型声明方式:  
 ```
 1. 强制要求使用 like 方式声明query查询
@@ -157,10 +157,9 @@ where default like '%咸鱼%';
 <font style="font-weight: 700" color="red">PS: 新版本使用"="需要注意名称是否为属性名称(若不是则会导致查询失败, 旧版本使用"=" + 动态探测类型可能会注入query中, 新版本将"="改为"like"注入进query中, 旧版本使用"="注入进filter中则不用处理)
 </font>
 
-#### 当前版本：v0.0.2-SNAPSHOT  
-#### 当前版本支持：  
-1. 目前仅支持查询功能  
-2. 当前支持语法  
+#### 历史变更：v0.0.2-SNAPSHOT
+1. 仅支持查询功能  
+2. 支持语法  
   2.1. 仅支持4种聚合函数：**count**，**min**，**max**，**sum**  
   2.2. **select** 仅支持查询字段，暂不支持别名功能（聚合函数不支持嵌套，使用聚合函数必须要分组，暂不支持having语法，参考：<a href="https://help.aliyun.com/document_detail/180049.html">aggregate字句</a>。  
   2.3. **where** 中暂不支持 **in** 语法以及嵌套查询（目前支持 **=**, **>=**, **<=**, **<**, **>**, **like**, **!=**, **<>**），PS：比较运算符暂时仅通过 **filter** 实现，**range** 实现正在开发中。  
