@@ -38,6 +38,8 @@ public class OpenSearchConverter {
 
     private final static Logger log = LoggerFactory.getLogger(OpenSearchConverter.class);
 
+    private final static Tuple2<String, String> EMPTY_STRING_TUPLE2 = Tuple2.of(Constants.EMPTY_STRING, Constants.EMPTY_STRING);
+
     public static List<String> explainFrom(MySqlSchemaStatVisitor visitor) {
         Set<TableStat.Name> names = visitor.getTables().keySet();
         List<String> appNames = new ArrayList<>(names.size());
@@ -117,6 +119,23 @@ public class OpenSearchConverter {
         }
         return queryAndFilter;
     }
+
+    public static Rank expainRank(Map<String, Object> mp) {
+        Rank rank = new Rank();
+        String firstRankName = (String) mp.get(Constants.DEFAULT_FIRST_RANK_NAME),
+            secondRankName = (String) mp.get(Constants.DEFAULT_SECOND_RANK_NAME);
+        Object reRankSize = mp.get(Constants.DEFAULT_RE_RANK_SIZE_NAME);
+        if (firstRankName != null) {
+            rank.setFirstRankName(firstRankName);
+        }
+        if (secondRankName != null) {
+            rank.setSecondRankName(secondRankName);
+        }
+        if (reRankSize != null) {
+            rank.setReRankSize(Integer.parseInt(String.valueOf(reRankSize)));
+        }
+        return rank;
+    }
     /**
      * https://help.aliyun.com/document_detail/180014.html
      * https://help.aliyun.com/document_detail/180028.html
@@ -128,7 +147,7 @@ public class OpenSearchConverter {
     private static Tuple2<Tuple2<String, String>, Map<String, Object>> getQueryAndFilter(SQLBinaryOpExpr expr) {
         SQLExpr leftChildSqlExpr = null, rightChildSqlExpr = null;
         if (expr == null || ((leftChildSqlExpr = expr.getLeft()) == null & (rightChildSqlExpr = expr.getRight()) == null)) {
-            return Tuple2.of(Tuple2.of(Constants.EMPTY_STRING, Constants.EMPTY_STRING), Collections.emptyMap());
+            return Tuple2.of(EMPTY_STRING_TUPLE2, Collections.emptyMap());
         }
         boolean leftOp, rightOp;
         String opName = getQueryAndFilterBinaryOperatorName(expr.getOperator());
@@ -158,15 +177,18 @@ public class OpenSearchConverter {
                             + Constants.COLON_SINGLE_QUOTES + value + Constants.SINGLE_QUOTES_MARK,
                         Constants.EMPTY_STRING), Collections.emptyMap());
                 }
-                return Tuple2.of(Tuple2.of(Constants.EMPTY_STRING, Constants.EMPTY_STRING), Collections.emptyMap());
+                return Tuple2.of(EMPTY_STRING_TUPLE2, Collections.emptyMap());
             }
             // 其他表达式统一使用filter
             else {
-                String value = right.toString();
+                String name = left.toString(), value = right.toString();
+                if (isInnerParamName(name)) {
+                    return resolveInnerParam(name, value);
+                }
                 if (rightChildSqlExpr instanceof SQLTextLiteralExpr) {
                     value = Constants.DOUBLE_QUOTES_MARK + value + Constants.DOUBLE_QUOTES_MARK;
                 }
-                return Tuple2.of(Tuple2.of(Constants.EMPTY_STRING, left + opName + value), Collections.emptyMap());
+                return Tuple2.of(Tuple2.of(Constants.EMPTY_STRING, name + opName + value), Collections.emptyMap());
             }
         }
         else if (leftOp && rightOp){
@@ -190,19 +212,83 @@ public class OpenSearchConverter {
             }
             return right;
         }
-//        return Tuple2.of(Constants.EMPTY_STRING, Constants.EMPTY_STRING);
+//        return EMPTY_STRING_TUPLE2;
+    }
+
+    private static Tuple2<Tuple2<String, String>, Map<String, Object>> resolveInnerParam(String name, Object value) {
+        Map<String, Object> mp = new HashMap<>();
+        if (Constants.FIRST_RANK_NAMES.contains(name)) {
+            mp.put(Constants.DEFAULT_FIRST_RANK_NAME, value);
+        } else if (Constants.SECOND_RANK_NAMES.contains(name)) {
+            mp.put(Constants.DEFAULT_SECOND_RANK_NAME, value);
+        } else if (Constants.QUERY_PROCESSOR_NAMES.contains(name)) {
+            mp.put(Constants.QUERY_PROCESSOR_NAMES, Collections.singletonList(value));
+        } else if (Constants.RE_RANK_SIZE_NAMES.contains(name)) {
+            mp.put(Constants.DEFAULT_RE_RANK_SIZE_NAME, value);
+        }
+        return Tuple2.of(EMPTY_STRING_TUPLE2, mp);
+    }
+
+    private static Tuple2<Tuple2<String, String>, Map<String, Object>> resolveInnerParam(SQLInListExpr expr) {
+        String exp = expr.isNot() ? Constants.NOTIN : Constants.IN;
+        String name = expr.getExpr() instanceof SQLIdentifierExpr ? ((SQLIdentifierExpr)expr.getExpr()).getLowerName() : resolveQueryAndFilterSQLExpr(expr.getExpr()).toString();
+        // 檢查qp是否在in中
+        if (Constants.IN.equals(exp)) {
+            if (Constants.QUERY_PROCESSOR_NAMES.equals(name)) {
+                Map<String, Object> mp = new HashMap<>();
+                List<String> qpNames = new ArrayList<>();
+                expr.getTargetList().forEach(e -> {
+                    if (e instanceof SQLValuableExpr) {
+                        qpNames.add(((SQLValuableExpr) e).getValue().toString());
+                    }
+                });
+                if (!qpNames.isEmpty()) {
+                    mp.put(Constants.QUERY_PROCESSOR_NAMES, qpNames);
+                }
+                return Tuple2.of(EMPTY_STRING_TUPLE2, mp);
+            } else if (Constants.FIRST_RANK_NAMES.contains(name)) {
+                Map<String, Object> mp = new HashMap<>();
+                expr.getTargetList().stream().findFirst().ifPresent(e -> {
+                    if (e instanceof SQLValuableExpr) {
+                        mp.put(Constants.DEFAULT_FIRST_RANK_NAME, ((SQLValuableExpr) e).getValue());
+                    }
+                });
+                return Tuple2.of(EMPTY_STRING_TUPLE2, mp);
+            } else if (Constants.SECOND_RANK_NAMES.contains(name)) {
+                Map<String, Object> mp = new HashMap<>();
+                expr.getTargetList().stream().findFirst().ifPresent(e -> {
+                    if (e instanceof SQLValuableExpr) {
+                        mp.put(Constants.DEFAULT_SECOND_RANK_NAME, ((SQLValuableExpr) e).getValue());
+                    }
+                });
+                return Tuple2.of(EMPTY_STRING_TUPLE2, mp);
+            } else if (Constants.RE_RANK_SIZE_NAMES.contains(name)) {
+                Map<String, Object> mp = new HashMap<>();
+                expr.getTargetList().stream().findFirst().ifPresent(e -> {
+                    if (e instanceof SQLValuableExpr) {
+                        mp.put(Constants.DEFAULT_RE_RANK_SIZE_NAME, ((SQLValuableExpr) e).getValue());
+                    }
+                });
+                return Tuple2.of(EMPTY_STRING_TUPLE2, mp);
+            }
+        }
+        return Tuple2.of(EMPTY_STRING_TUPLE2, (Map<String, Object>)Collections.EMPTY_MAP);
     }
 
     private static Object resolveQueryAndFilterSQLExpr(SQLExpr expr) {
         return resolveQueryAndFilterSQLExpr(expr, true);
     }
 
+    private static boolean isInnerParamName(String name) {
+        return Constants.INNER_PARAM_NAMES.contains(name);
+    }
+
     /**
      * https://help.aliyun.com/document_detail/204346.html
-     * @param op 是否是表达式类型expr，为false表示表达式一部分的expr，例如SQLMethodInvokeExpr类型获取的结果只是一个值域
+     * @param binary 是否是表达式类型expr，为false表示表达式一部分的expr，例如SQLMethodInvokeExpr类型获取的结果只是一个值域
      * @return
      */
-    private static Object resolveQueryAndFilterSQLExpr(SQLExpr expr, boolean op) {
+    private static Object resolveQueryAndFilterSQLExpr(SQLExpr expr, boolean binary) {
         // binary
         if (expr instanceof SQLInListExpr) return getQueryAndFilter((SQLInListExpr)expr);
         if (expr instanceof SQLBinaryOpExpr) return getQueryAndFilter((SQLBinaryOpExpr) expr);
@@ -215,7 +301,7 @@ public class OpenSearchConverter {
         if (expr instanceof SQLIdentifierExpr) return getQueryAndFilter((SQLIdentifierExpr) expr);
         if (expr instanceof SQLNumericLiteralExpr) return getQueryAndFilter((SQLNumericLiteralExpr) expr);
         if (expr instanceof SQLTextLiteralExpr) return getQueryAndFilter((SQLTextLiteralExpr) expr);
-        return op ? Tuple2.of(Constants.EMPTY_STRING, Constants.EMPTY_STRING) : "";
+        return binary ? EMPTY_STRING_TUPLE2 : "";
     }
 
     private static boolean isBinary(SQLExpr expr) {
@@ -258,17 +344,9 @@ public class OpenSearchConverter {
     private static Tuple2<Tuple2<String, String>, Map<String, Object>> getQueryAndFilter(SQLInListExpr expr) {
         String exp = expr.isNot() ? Constants.NOTIN : Constants.IN;
         Object name = expr.getExpr() instanceof SQLIdentifierExpr ? ((SQLIdentifierExpr)expr.getExpr()).getLowerName() : resolveQueryAndFilterSQLExpr(expr.getExpr());
-        // 檢查qp是否在in中
-        if (Constants.IN.equals(exp) && Constants.QUERY_PROCESSOR_NAMES.equals(name)) {
-            Map<String, Object> mp = new HashMap<>();
-            List<String> qpNames = new ArrayList<>();
-            expr.getTargetList().forEach(e -> {
-                if (e instanceof SQLValuableExpr) {
-                    qpNames.add(((SQLValuableExpr) e).getValue().toString());
-                }
-            });
-            mp.put("qp", qpNames);
-            return Tuple2.of(Tuple2.of(Constants.EMPTY_STRING, Constants.EMPTY_STRING), mp);
+        // 檢查名称是否内部参数名称
+        if (isInnerParamName(name.toString())) {
+            return resolveInnerParam(expr);
         }
         StringBuilder builder = new StringBuilder(exp + "(" + name + ", \"");
         for (int i = 0; i < expr.getTargetList().size(); i++) {
@@ -326,7 +404,22 @@ public class OpenSearchConverter {
             map = Collections.emptyMap();
         } else if (!leftTp.t2.isEmpty() && !rightTp.t2.isEmpty()) {
             map = new HashMap<>(leftTp.t2);
-            map.putAll(rightTp.t2);
+            rightTp.t2.forEach((k, v) -> {
+                Object mv = map.get(k);
+                if (mv == null) {
+                    map.put(k, v);
+                } else if (mv instanceof Collection && v instanceof Collection){
+                    Object instance;
+                    if (mv instanceof Set) {
+                        instance = new HashSet<>();
+                    } else {
+                        instance = new ArrayList<>();
+                    }
+                    ((Collection) instance).addAll((Collection) mv);
+                    ((Collection) instance).addAll((Collection) v);
+                    map.put(k, instance);
+                }
+            });
         } else if (!leftTp.t2.isEmpty()) {
             map = leftTp.t2;
         } else {
@@ -449,7 +542,7 @@ public class OpenSearchConverter {
         }
         List<SQLSelectOrderByItem> orderByItems = block.getOrderBy().getItems();
         List<SortField> sortFields = new ArrayList<>(orderByItems.size());
-        orderByItems.forEach(item -> sortFields.add(new SortField(((SQLIdentifierExpr)item.getExpr()).getLowerName(),
+        orderByItems.forEach(item -> sortFields.add(new SortField(resolveQueryAndFilterSQLExpr(item.getExpr(), false).toString(),
                 item.getType() == null || Constants.INCREASE.equalsIgnoreCase(item.getType().name) ? Order.INCREASE : Order.DECREASE)));
         return !sortFields.isEmpty() ? new Sort(sortFields) : null;
     }
