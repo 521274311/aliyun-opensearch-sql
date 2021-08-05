@@ -60,7 +60,8 @@ config.start=0
 config.hit=10
 ```
 
-(**PS: 想要触发query查询使用name like '%xxx%' 或 name="xxx" 均可**)
+(**PS: ~~想要触发query查询使用name like '%xxx%' 或 name="xxx" 均可~~
+v0.0.3-SNAPSHOT版本仅支持使用 name like '%xxx%查询'**)
 
 #### 普通字段去重查询示例
 ```
