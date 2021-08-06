@@ -34,6 +34,10 @@ public interface Constants {
     String SPACE_STRING = " ";
     char PERCENT_SIGN_CHARACTER = '%';
     String LIKE = "like";
+    String NOT_LIKE = "not like";
+    String Q_AND = "AND";
+    String Q_OR = "OR";
+    String ANDNOT = "ANDNOT";
     String HEAD_TERMINATOR = "^";
     String TAIL_TERMINATOR = "$";
     String LEFT_SMALL_BRACKET = "(";

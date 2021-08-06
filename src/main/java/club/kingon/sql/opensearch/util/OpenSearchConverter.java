@@ -150,12 +150,12 @@ public class OpenSearchConverter {
             return Tuple2.of(EMPTY_STRING_TUPLE2, Collections.emptyMap());
         }
         boolean leftOp, rightOp;
-        String opName = getQueryAndFilterBinaryOperatorName(expr.getOperator());
+        String opName = getQueryAndFilterBinaryOperatorName(expr.getOperator()), opNameLower = opName.toLowerCase();
         if (!(leftOp = isBinary(leftChildSqlExpr)) & !(rightOp = isBinary(rightChildSqlExpr))) {
             Object left = resolveQueryAndFilterSQLExpr(leftChildSqlExpr, false);
             Object right = resolveQueryAndFilterSQLExpr(rightChildSqlExpr, false);
             // 使用like指定使用query
-            if (Constants.LIKE.equalsIgnoreCase(opName)) {
+            if (Constants.LIKE.equals(opNameLower) || Constants.NOT_LIKE.equals(opNameLower)) {
                 String value = right.toString();
                 boolean hasChinese = PatternUtil.hasChinese(value);
                 if (value != null && !value.isEmpty()) {
@@ -194,6 +194,10 @@ public class OpenSearchConverter {
         else if (leftOp && rightOp){
             Tuple2<Tuple2<String, String>, Map<String, Object>> left = (Tuple2<Tuple2<String, String>, Map<String, Object>>) resolveQueryAndFilterSQLExpr(leftChildSqlExpr, true);
             Tuple2<Tuple2<String, String>, Map<String, Object>> right = (Tuple2<Tuple2<String, String>, Map<String, Object>>) resolveQueryAndFilterSQLExpr(rightChildSqlExpr, true);
+            // query ANDNOT 支持
+            if (Constants.Q_AND.equals(opName) && rightChildSqlExpr instanceof SQLBinaryOpExpr && Constants.NOT_LIKE.equals(((SQLBinaryOpExpr) rightChildSqlExpr).getOperator().name_lcase)) {
+                opName = Constants.ANDNOT;
+            }
             return mergeQueryAndFilter(left, right, opName);
         }
         // 复合表达式仅支持filter
@@ -543,7 +547,7 @@ public class OpenSearchConverter {
         List<SQLSelectOrderByItem> orderByItems = block.getOrderBy().getItems();
         List<SortField> sortFields = new ArrayList<>(orderByItems.size());
         orderByItems.forEach(item -> sortFields.add(new SortField(resolveQueryAndFilterSQLExpr(item.getExpr(), false).toString(),
-                item.getType() == null || Constants.INCREASE.equalsIgnoreCase(item.getType().name) ? Order.INCREASE : Order.DECREASE)));
+                item.getType() == null || Constants.INCREASE.equals(item.getType().name) ? Order.INCREASE : Order.DECREASE)));
         return !sortFields.isEmpty() ? new Sort(sortFields) : null;
     }
 }
