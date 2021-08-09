@@ -7,7 +7,7 @@
 ##### 2.需要查询的字段若支持设置为属性字段则添加到属性字段
 ##### 3.默认展示字段建议添加全部字段, 在具体业务中指定需要返回的字段即可.
 #### SQL使用语法（同Mysql语法）：  
-```
+```sql
 select  
         [Distinct + attribute_field_name(属性字段)]  
         [count,sum,max,min(聚合) + attribute_field_name(属性字段)]  
@@ -47,13 +47,13 @@ unique_id, uid, age
 unique_id, uid, name, age  
 
 #### 普通字段查询示例 (like字段仅可用于模糊分析方式的索引中)
-```
+```sql
 select id, uid, name, age
 from app_name
 where uid >= 1 and uid <= 1000 and name like 'dragons%' and age = 18
-limit 10
+limit 10;
 
-内部解析结果:
+-- 内部解析结果:
 query=name:'^dragons'
 filter=uid>=1 AND uid<=1000 AND age=18
 config.start=0
@@ -64,15 +64,16 @@ config.hit=10
 v0.0.3-SNAPSHOT版本仅支持使用 name like '%xxx%查询'**)
 
 #### 普通字段去重查询示例
-```
+```sql
 select distinct uid
 from app_name
 where uid >= 1 and uid <= 1000 and name like 'dragons%' and age = 18
+limit 10;
 ```
   
 
 #### 聚合查询示例：
-```  
+```sql
 select name, count(), max(distinct uid)  
 from app_name  
 where uid>=1 and uid<=100000 and name like 'dragons%'  
@@ -82,51 +83,72 @@ limit 0, 100
 (PS：建议OpenSearch默认展示字段配置全部展示字段)  
 
 #### 获取SearchResult对象使用示例（默认Iterator.next()迭代一次搜索）：
-```  
-OpenSearch openSearch = new OpenSearch(ACCESS_KEY, SECRET, HOST);  
-OpenSearchClient openSearchClient = new OpenSearchClient(openSearch);  
-SearcherClient searcherClient = new SearcherClient(openSearchClient);  
-SearcherClientQueryIterator iterator = new DefaultSearcherClientQueryIterator(searcherClient, SQL);  
-while (iterator.hasNext()) {  
-    System.out.println(iterator.next());  // SearchResult对象
-}  
+```java
+import com.aliyun.opensearch.OpenSearchClient;
+import com.aliyun.opensearch.SearcherClient;
+import com.aliyun.opensearch.sdk.generated.OpenSearch;
+
+public class Test {
+    public static void main(String[] args) {
+        OpenSearch openSearch = new OpenSearch(ACCESS_KEY, SECRET, HOST);
+        OpenSearchClient openSearchClient = new OpenSearchClient(openSearch);
+        SearcherClient searcherClient = new SearcherClient(openSearchClient);
+        SearcherClientQueryIterator iterator = new DefaultSearcherClientQueryIterator(searcherClient, SQL);
+        while (iterator.hasNext()) {
+            System.out.println(iterator.next());  // SearchResult对象
+        }
+    }
+}
 ```
 #### 获取单个元素对象使用示例（使用SearcherClientQueryIterator.hasNextOne() 与 SearcherClientQueryIterator.nextOne()获取单个元素对象）
-```
-OpenSearch openSearch = new OpenSearch(ACCESS_KEY, SECRET, HOST);  
-OpenSearchClient openSearchClient = new OpenSearchClient(openSearch);  
-SearcherClient searcherClient = new SearcherClient(openSearchClient);  
-SearcherClientQueryIterator iterator = new DefaultSearcherClientQueryIterator(searcherClient, SQL);  
-while (iterator.hasNextOne()) {  
-    System.out.println(iterator.nextOne());  // com.aliyun.opensearch.sdk.dependencies.org.json.JSONObject对象
-}  
+```java
+import com.aliyun.opensearch.OpenSearchClient;
+import com.aliyun.opensearch.SearcherClient;
+import com.aliyun.opensearch.sdk.generated.OpenSearch;
+
+public class Test {
+    public static void main(String[] args) {
+        OpenSearch openSearch = new OpenSearch(ACCESS_KEY, SECRET, HOST);
+        OpenSearchClient openSearchClient = new OpenSearchClient(openSearch);
+        SearcherClient searcherClient = new SearcherClient(openSearchClient);
+        SearcherClientQueryIterator iterator = new DefaultSearcherClientQueryIterator(searcherClient, SQL);
+        while (iterator.hasNextOne()) {
+            System.out.println(iterator.nextOne());  // com.aliyun.opensearch.sdk.dependencies.org.json.JSONObject对象
+        }
+    }
+}
 ```
 #### 实战(常见问题汇总)
-```
+```sql
 1.like 语法比价的值若不是OpenSearch模糊搜索索引左右需均带上%,即使是关键词索引需要精确匹配两边也需带上%。OpenSearch模糊查询文档：https://help.aliyun.com/document_detail/179439.html
 select *
 from app_name
 where kname like '%dragons%' 
 limit 10;
+
 内部解析结果:
 query=kname:'dragons'
 若不加%,即where id like 'dragons'将会解析为
 query=kname:'^dragons$'
 索引若不支持模糊查询将无法查询得到结果
 
+
 2.不要在like与其他表达式中混入OR连接符,OpenSearch查询是同时传入query与filter，若混用则可能导致结果不符合预期,示例如下:
 select *
 from app_name
 where kname like '%dragons%' or unique_id=1
 limit 10;
+
 内部解析结果：
 query=kname:'dragons'
 filter=unique_id=1
+
 不符合查询预期，应使用like统一转为query查询,改写如下：
 select *
 from app_name
 where kname like '%dragons%' or id like '%1%'
 limit 10;
+
 这里id是unique_id的关键词索引，所以即使左右均加入%也是精确搜索,内部解析结果:
 query=kname:'dragons' OR id:'1'
 ```
@@ -140,26 +162,62 @@ query=kname:'dragons' OR id:'1'
  ```
 
 2. 新增支持in语法(in语法也是通过filter查询)、between语法(between语法内部使用filter range功能, 仅支持数值类型与时间类型)、函数功能。具体参考: <a href="https://help.aliyun.com/document_detail/204346.html">OpenSearch Filter字句</a>。使用示例如下：
-```
+```sql
 select *
 from app_name
-where id_range between 1 and 5 and age in (18, 19, 20);
-
-插件内部将转换为: filter=id_range:[1,5] AND in(age, "18|19|20")
+where id_range between 1 and 5 and age in (18, 19, 20)
+limit 10;
+-- 插件内部将转换为: filter=id_range:[1,5] AND in(age, "18|19|20")
 ```
 3. 新增default like查询支持, 示例如下:
-```
+```sql
 select *
 from app_name
-where default like '%咸鱼%';
+where default like '%咸鱼%'
+limit 10;
 ```
-4. 增加查询分析qp参数in语法支持, 示例如下:
-```
+4. 增加查询分析qp参数支持, 示例如下:
+```sql
 select *
 from app_name
 where name like '%dragons%' and qp in ('sys_default')
+limit 10;
+-- 或
+select *
+from app_name
+where name like '%dragons%' and qp = 'sys_default'
+limit 10;
 ```
 5. 转换器内部结构优化
+6. 增加粗排表达式、精排表达式、自定义kvpairs参数支持, 示例如下：
+```sql
+select *
+from app_name
+where name like '%dragons%'
+  -- 粗排表达式, 字段名为 first_rank_name、firstRankName 均可
+  and first_rank_name='default' 
+  -- 精排表达式, 字段名为 second_rank_name、secondRankName 均可
+  and second_rank_name='default'
+limit 10;
+
+select *
+from app_name
+where name like '%dragons%' 
+  -- OpenSearch上的排序表达式使用了kvpairs函数提取age_min与age_max值
+  -- 也可通过in语法分隔多个参数, 可改写为 kvpairs in ('age_min:10', 'age_max:20')
+  and kvpairs = 'age_min:10,age_max:20'
+limit 10;
+```
+7. 增加query ANDNOT 支持,示例如下, not like 使用之前需要通过and连接
+```sql
+select *
+from app_name
+where name like '%drag%' and name not like '%dragons%'
+limit 10;
+
+-- 内部改写
+query=name:'drag' ANDNOT 'dragons'
+```
 
 <font style="font-weight: 700" color="red">PS: 新版本使用"="需要注意名称是否为属性名称(若不是则会导致查询失败, 旧版本使用"=" + 动态探测类型可能会注入query中, 新版本将"="改为"like"注入进query中, 旧版本使用"="注入进filter中则不用处理)
 </font>
