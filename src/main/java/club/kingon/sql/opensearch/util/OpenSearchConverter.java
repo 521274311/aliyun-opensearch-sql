@@ -111,11 +111,13 @@ public class OpenSearchConverter {
 
     public static Tuple2<Tuple2<String, String>, Map<String, Object>> explainWhere(SQLExpr expr) {
         Tuple2<Tuple2<String, String>, Map<String, Object>> queryAndFilter = (Tuple2<Tuple2<String, String>, Map<String, Object>>) resolveQueryAndFilterSQLExpr(expr, true);
-        if ("".equals(queryAndFilter.t1.t1)) {
-            queryAndFilter.t1.t1 = null;
-        }
-        if ("".equals(queryAndFilter.t1.t2)) {
-            queryAndFilter.t1.t2 = null;
+        if (queryAndFilter.t1 != null) {
+            if ("".equals(queryAndFilter.t1.t1)) {
+                queryAndFilter.t1.t1 = null;
+            }
+            if ("".equals(queryAndFilter.t1.t2)) {
+                queryAndFilter.t1.t2 = null;
+            }
         }
         return queryAndFilter;
     }
