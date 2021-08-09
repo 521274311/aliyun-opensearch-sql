@@ -21,6 +21,7 @@ import com.aliyun.opensearch.sdk.generated.search.general.SearchResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -45,7 +46,7 @@ public class DefaultSearcherClientQueryIterator extends AbstractSearcherClientQu
     private final List<String> fetchField;
     private final String query;
     private final String filter;
-    private final Set<Distinct> distincts;
+    private Set<Distinct> distincts;
     private final Set<Aggregate> aggregates;
     private final Sort sort;
     private DeepPaging deepPaging;
@@ -311,6 +312,10 @@ public class DefaultSearcherClientQueryIterator extends AbstractSearcherClientQu
 
     public String getFilter() {
         return filter;
+    }
+
+    public void setDistincts(Set<Distinct> distincts) {
+        this.distincts = distincts;
     }
 
     public Set<Distinct> getDistincts() {
