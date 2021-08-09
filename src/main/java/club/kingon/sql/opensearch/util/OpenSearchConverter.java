@@ -110,14 +110,17 @@ public class OpenSearchConverter {
     }
 
     public static Tuple2<Tuple2<String, String>, Map<String, Object>> explainWhere(SQLExpr expr) {
-        Tuple2<Tuple2<String, String>, Map<String, Object>> queryAndFilter = (Tuple2<Tuple2<String, String>, Map<String, Object>>) resolveQueryAndFilterSQLExpr(expr, true);
-        if ("".equals(queryAndFilter.t1.t1)) {
-            queryAndFilter.t1.t1 = null;
+        if (isBinary(expr)) {
+            Tuple2<Tuple2<String, String>, Map<String, Object>> queryAndFilter = (Tuple2<Tuple2<String, String>, Map<String, Object>>) resolveQueryAndFilterSQLExpr(expr, true);
+            if (Constants.EMPTY_STRING.equals(queryAndFilter.t1.t1)) {
+                queryAndFilter.t1.t1 = null;
+            }
+            if (Constants.EMPTY_STRING.equals(queryAndFilter.t1.t2)) {
+                queryAndFilter.t1.t2 = null;
+            }
+            return queryAndFilter;
         }
-        if ("".equals(queryAndFilter.t1.t2)) {
-            queryAndFilter.t1.t2 = null;
-        }
-        return queryAndFilter;
+        return Tuple2.of(Tuple2.of(null, null), new HashMap<>());
     }
 
     public static Rank expainRank(Map<String, Object> mp) {
@@ -334,7 +337,7 @@ public class OpenSearchConverter {
     }
 
     private static String getQueryAndFilter(SQLIdentifierExpr expr) {
-        return expr.getLowerName();
+        return expr.getName();
     }
 
     private static Object getQueryAndFilter(SQLNumericLiteralExpr expr) {
@@ -560,7 +563,8 @@ public class OpenSearchConverter {
         }
         List<SQLSelectOrderByItem> orderByItems = block.getOrderBy().getItems();
         List<SortField> sortFields = new ArrayList<>(orderByItems.size());
-        orderByItems.forEach(item -> sortFields.add(new SortField(resolveQueryAndFilterSQLExpr(item.getExpr(), false).toString(),
+        orderByItems.forEach(item -> sortFields.add(
+            new SortField(resolveQueryAndFilterSQLExpr(item.getExpr(), false).toString(),
                 item.getType() == null || Constants.INCREASE.equals(item.getType().name) ? Order.INCREASE : Order.DECREASE)));
         return !sortFields.isEmpty() ? new Sort(sortFields) : null;
     }

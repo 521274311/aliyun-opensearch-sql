@@ -12,9 +12,9 @@ public interface Constants {
     String DEFAULT_RE_RANK_SIZE_NAME = "re_rank_size";
     String DEFAULT_KVPAIRS = "kvpairs";
 
-    Set<String> FIRST_RANK_NAMES = new HashSet<>(Arrays.asList(DEFAULT_FIRST_RANK_NAME, "firstrankname"));
-    Set<String> SECOND_RANK_NAMES = new HashSet<>(Arrays.asList(DEFAULT_SECOND_RANK_NAME, "secondrankname"));
-    Set<String> RE_RANK_SIZE_NAMES = new HashSet<>(Arrays.asList(DEFAULT_RE_RANK_SIZE_NAME, "reranksize"));
+    Set<String> FIRST_RANK_NAMES = new HashSet<>(Arrays.asList(DEFAULT_FIRST_RANK_NAME, "firstRankName"));
+    Set<String> SECOND_RANK_NAMES = new HashSet<>(Arrays.asList(DEFAULT_SECOND_RANK_NAME, "secondRankName"));
+    Set<String> RE_RANK_SIZE_NAMES = new HashSet<>(Arrays.asList(DEFAULT_RE_RANK_SIZE_NAME, "reRankSize"));
     Set<String> INNER_PARAM_NAMES = new HashSet<String>() {{
         add(QUERY_PROCESSOR_NAMES);
         addAll(FIRST_RANK_NAMES);
