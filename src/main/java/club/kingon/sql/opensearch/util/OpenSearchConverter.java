@@ -334,7 +334,7 @@ public class OpenSearchConverter {
     }
 
     private static String getQueryAndFilter(SQLIdentifierExpr expr) {
-        return expr.getLowerName();
+        return expr.getName();
     }
 
     private static Object getQueryAndFilter(SQLNumericLiteralExpr expr) {
@@ -560,7 +560,8 @@ public class OpenSearchConverter {
         }
         List<SQLSelectOrderByItem> orderByItems = block.getOrderBy().getItems();
         List<SortField> sortFields = new ArrayList<>(orderByItems.size());
-        orderByItems.forEach(item -> sortFields.add(new SortField(resolveQueryAndFilterSQLExpr(item.getExpr(), false).toString(),
+        orderByItems.forEach(item -> sortFields.add(
+            new SortField(resolveQueryAndFilterSQLExpr(item.getExpr(), false).toString(),
                 item.getType() == null || Constants.INCREASE.equals(item.getType().name) ? Order.INCREASE : Order.DECREASE)));
         return !sortFields.isEmpty() ? new Sort(sortFields) : null;
     }
