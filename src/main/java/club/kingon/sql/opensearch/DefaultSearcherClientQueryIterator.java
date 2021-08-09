@@ -57,6 +57,7 @@ public class DefaultSearcherClientQueryIterator extends AbstractSearcherClientQu
     private int batch = Constants.MAX_ONE_HIT;
     private final List<String> queryProcessorNames;
     private final Rank rank;
+    private final String kvpairs;
 
     private boolean alreadyExplain = false;
     private JSONArray items = null;
@@ -75,6 +76,7 @@ public class DefaultSearcherClientQueryIterator extends AbstractSearcherClientQu
         filter = queryAndFilterAndParams.t1.t2;
         queryProcessorNames = (List<String>) queryAndFilterAndParams.t2.get(Constants.QUERY_PROCESSOR_NAMES);
         rank = OpenSearchConverter.expainRank(queryAndFilterAndParams.t2);
+        kvpairs = (String) queryAndFilterAndParams.t2.get(Constants.DEFAULT_KVPAIRS);
         distincts = OpenSearchConverter.explainDistinct(block);
         aggregates = OpenSearchConverter.explainAggregate(block, visitor);
         sort = OpenSearchConverter.explainSort(block);
@@ -105,7 +107,7 @@ public class DefaultSearcherClientQueryIterator extends AbstractSearcherClientQu
         }
         int num = count > batch ? batch : count;
         OpenSearchBuilderUtil.SearchParamsBuilder searchParamsBuilder = OpenSearchBuilderUtil.searchParamsBuilder(
-                OpenSearchBuilderUtil.configBuilder(appNames, offset, num, fetchField).build(), query)
+                OpenSearchBuilderUtil.configBuilder(appNames, offset, num, fetchField).kvpairs(kvpairs).build(), query)
                 .filter(filter)
                 // 支持设置qp
                 .queryProcessorNames(queryProcessorNames)

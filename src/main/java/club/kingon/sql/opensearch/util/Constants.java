@@ -10,6 +10,7 @@ public interface Constants {
     String DEFAULT_FIRST_RANK_NAME = "first_rank_name";
     String DEFAULT_SECOND_RANK_NAME = "second_rank_name";
     String DEFAULT_RE_RANK_SIZE_NAME = "re_rank_size";
+    String DEFAULT_KVPAIRS = "kvpairs";
 
     Set<String> FIRST_RANK_NAMES = new HashSet<>(Arrays.asList(DEFAULT_FIRST_RANK_NAME, "firstrankname"));
     Set<String> SECOND_RANK_NAMES = new HashSet<>(Arrays.asList(DEFAULT_SECOND_RANK_NAME, "secondrankname"));
@@ -19,6 +20,7 @@ public interface Constants {
         addAll(FIRST_RANK_NAMES);
         addAll(SECOND_RANK_NAMES);
         addAll(RE_RANK_SIZE_NAMES);
+        add(DEFAULT_KVPAIRS);
     }};
     String EMPTY_STRING = "";
     String EQUAL_SIGN = "=";

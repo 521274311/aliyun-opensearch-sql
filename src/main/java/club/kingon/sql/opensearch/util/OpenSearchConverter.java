@@ -229,6 +229,8 @@ public class OpenSearchConverter {
             mp.put(Constants.QUERY_PROCESSOR_NAMES, Collections.singletonList(value));
         } else if (Constants.RE_RANK_SIZE_NAMES.contains(name)) {
             mp.put(Constants.DEFAULT_RE_RANK_SIZE_NAME, value);
+        } else if (Constants.DEFAULT_KVPAIRS.equals(name)) {
+            mp.put(Constants.DEFAULT_KVPAIRS, value);
         }
         return Tuple2.of(EMPTY_STRING_TUPLE2, mp);
     }
@@ -273,6 +275,18 @@ public class OpenSearchConverter {
                         mp.put(Constants.DEFAULT_RE_RANK_SIZE_NAME, ((SQLValuableExpr) e).getValue());
                     }
                 });
+                return Tuple2.of(EMPTY_STRING_TUPLE2, mp);
+            } else if (Constants.DEFAULT_KVPAIRS.equals(name)) {
+                Map<String, Object> mp = new HashMap<>();
+                StringBuilder kvpairsBuilder = new StringBuilder();
+                expr.getTargetList().forEach(e -> {
+                    if (e instanceof SQLValuableExpr) {
+                        kvpairsBuilder.append(((SQLValuableExpr) e).getValue()).append(",");
+                    }
+                });
+                if (kvpairsBuilder.length() > 0) {
+                    mp.put(Constants.DEFAULT_KVPAIRS, kvpairsBuilder.substring(0, kvpairsBuilder.length() - 1));
+                }
                 return Tuple2.of(EMPTY_STRING_TUPLE2, mp);
             }
         }

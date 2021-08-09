@@ -72,6 +72,11 @@ public class OpenSearchBuilderUtil {
             return this;
         }
 
+        public ConfigBuilder kvpairs(String kvpairs) {
+            this.kvpairs = kvpairs;
+            return this;
+        }
+
         public Config build() {
             Config cfg = new Config(appNames);
             cfg.setStart(start);
