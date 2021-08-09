@@ -216,7 +216,7 @@ where name like '%drag%' and name not like '%dragons%'
 limit 10;
 
 -- 内部改写
-query=name:'drag' ANDNOT 'dragons'
+query=name:'drag' ANDNOT name:'dragons'
 ```
 
 <font style="font-weight: 700" color="red">PS: 新版本使用"="需要注意名称是否为属性名称(若不是则会导致查询失败, 旧版本使用"=" + 动态探测类型可能会注入query中, 新版本将"="改为"like"注入进query中, 旧版本使用"="注入进filter中则不用处理)
