@@ -6,7 +6,7 @@
 
     <groupId>club.kingons.plugins.sql</groupId>
     <artifactId>aliyun-opensearch-sql</artifactId>
-    <version>0.0.3-SNAPSHOT</version>
+    <version>0.0.4-SNAPSHOT</version>
     <build>
         <plugins>
             <plugin>
@@ -31,7 +31,7 @@
 
     <properties>
         <opensearch.version>3.5.1</opensearch.version>
-        <druid.version>1.1.16</druid.version>
+        <druid.version>1.2.6</druid.version>
         <hutool.version>5.4.3</hutool.version>
     </properties>
 
