@@ -110,17 +110,14 @@ public class OpenSearchConverter {
     }
 
     public static Tuple2<Tuple2<String, String>, Map<String, Object>> explainWhere(SQLExpr expr) {
-        if (isBinary(expr)) {
-            Tuple2<Tuple2<String, String>, Map<String, Object>> queryAndFilter = (Tuple2<Tuple2<String, String>, Map<String, Object>>) resolveQueryAndFilterSQLExpr(expr, true);
-            if (Constants.EMPTY_STRING.equals(queryAndFilter.t1.t1)) {
-                queryAndFilter.t1.t1 = null;
-            }
-            if (Constants.EMPTY_STRING.equals(queryAndFilter.t1.t2)) {
-                queryAndFilter.t1.t2 = null;
-            }
-            return queryAndFilter;
+        Tuple2<Tuple2<String, String>, Map<String, Object>> queryAndFilter = (Tuple2<Tuple2<String, String>, Map<String, Object>>) resolveQueryAndFilterSQLExpr(expr, true);
+        if (Constants.EMPTY_STRING.equals(queryAndFilter.t1.t1)) {
+            queryAndFilter.t1.t1 = null;
         }
-        return Tuple2.of(Tuple2.of(null, null), new HashMap<>());
+        if (Constants.EMPTY_STRING.equals(queryAndFilter.t1.t2)) {
+            queryAndFilter.t1.t2 = null;
+        }
+        return queryAndFilter;
     }
 
     public static Rank expainRank(Map<String, Object> mp) {
@@ -322,7 +319,7 @@ public class OpenSearchConverter {
         if (expr instanceof SQLIdentifierExpr) return getQueryAndFilter((SQLIdentifierExpr) expr);
         if (expr instanceof SQLNumericLiteralExpr) return getQueryAndFilter((SQLNumericLiteralExpr) expr);
         if (expr instanceof SQLTextLiteralExpr) return getQueryAndFilter((SQLTextLiteralExpr) expr);
-        return binary ? EMPTY_STRING_TUPLE2 : "";
+        return binary ? Tuple2.of(Tuple2.of(Constants.EMPTY_STRING, Constants.EMPTY_STRING), new HashMap<>()) : "";
     }
 
     private static boolean isBinary(SQLExpr expr) {
