@@ -38,8 +38,6 @@ public class OpenSearchConverter {
 
     private final static Logger log = LoggerFactory.getLogger(OpenSearchConverter.class);
 
-    private final static Tuple2<String, String> EMPTY_STRING_TUPLE2 = Tuple2.of(Constants.EMPTY_STRING, Constants.EMPTY_STRING);
-
     public static List<String> explainFrom(MySqlSchemaStatVisitor visitor) {
         Set<TableStat.Name> names = visitor.getTables().keySet();
         List<String> appNames = new ArrayList<>(names.size());
@@ -147,7 +145,7 @@ public class OpenSearchConverter {
     private static Tuple2<Tuple2<String, String>, Map<String, Object>> getQueryAndFilter(SQLBinaryOpExpr expr) {
         SQLExpr leftChildSqlExpr = null, rightChildSqlExpr = null;
         if (expr == null || ((leftChildSqlExpr = expr.getLeft()) == null & (rightChildSqlExpr = expr.getRight()) == null)) {
-            return Tuple2.of(EMPTY_STRING_TUPLE2, Collections.emptyMap());
+            return Tuple2.of(Tuple2.of(Constants.EMPTY_STRING, Constants.EMPTY_STRING), Collections.emptyMap());
         }
         boolean leftOp, rightOp;
         String opName = getQueryAndFilterBinaryOperatorName(expr.getOperator()), opNameLower = opName.toLowerCase();
@@ -177,7 +175,7 @@ public class OpenSearchConverter {
                             + Constants.COLON_SINGLE_QUOTES + value + Constants.SINGLE_QUOTES_MARK,
                         Constants.EMPTY_STRING), Collections.emptyMap());
                 }
-                return Tuple2.of(EMPTY_STRING_TUPLE2, Collections.emptyMap());
+                return Tuple2.of(Tuple2.of(Constants.EMPTY_STRING, Constants.EMPTY_STRING), Collections.emptyMap());
             }
             // 其他表达式统一使用filter
             else {
@@ -232,7 +230,7 @@ public class OpenSearchConverter {
         } else if (Constants.DEFAULT_KVPAIRS.equals(name)) {
             mp.put(Constants.DEFAULT_KVPAIRS, value);
         }
-        return Tuple2.of(EMPTY_STRING_TUPLE2, mp);
+        return Tuple2.of(Tuple2.of(Constants.EMPTY_STRING, Constants.EMPTY_STRING), mp);
     }
 
     private static Tuple2<Tuple2<String, String>, Map<String, Object>> resolveInnerParam(SQLInListExpr expr) {
@@ -251,7 +249,7 @@ public class OpenSearchConverter {
                 if (!qpNames.isEmpty()) {
                     mp.put(Constants.QUERY_PROCESSOR_NAMES, qpNames);
                 }
-                return Tuple2.of(EMPTY_STRING_TUPLE2, mp);
+                return Tuple2.of(Tuple2.of(Constants.EMPTY_STRING, Constants.EMPTY_STRING), mp);
             } else if (Constants.FIRST_RANK_NAMES.contains(name)) {
                 Map<String, Object> mp = new HashMap<>();
                 expr.getTargetList().stream().findFirst().ifPresent(e -> {
@@ -259,7 +257,7 @@ public class OpenSearchConverter {
                         mp.put(Constants.DEFAULT_FIRST_RANK_NAME, ((SQLValuableExpr) e).getValue());
                     }
                 });
-                return Tuple2.of(EMPTY_STRING_TUPLE2, mp);
+                return Tuple2.of(Tuple2.of(Constants.EMPTY_STRING, Constants.EMPTY_STRING), mp);
             } else if (Constants.SECOND_RANK_NAMES.contains(name)) {
                 Map<String, Object> mp = new HashMap<>();
                 expr.getTargetList().stream().findFirst().ifPresent(e -> {
@@ -267,7 +265,7 @@ public class OpenSearchConverter {
                         mp.put(Constants.DEFAULT_SECOND_RANK_NAME, ((SQLValuableExpr) e).getValue());
                     }
                 });
-                return Tuple2.of(EMPTY_STRING_TUPLE2, mp);
+                return Tuple2.of(Tuple2.of(Constants.EMPTY_STRING, Constants.EMPTY_STRING), mp);
             } else if (Constants.RE_RANK_SIZE_NAMES.contains(name)) {
                 Map<String, Object> mp = new HashMap<>();
                 expr.getTargetList().stream().findFirst().ifPresent(e -> {
@@ -275,7 +273,7 @@ public class OpenSearchConverter {
                         mp.put(Constants.DEFAULT_RE_RANK_SIZE_NAME, ((SQLValuableExpr) e).getValue());
                     }
                 });
-                return Tuple2.of(EMPTY_STRING_TUPLE2, mp);
+                return Tuple2.of(Tuple2.of(Constants.EMPTY_STRING, Constants.EMPTY_STRING), mp);
             } else if (Constants.DEFAULT_KVPAIRS.equals(name)) {
                 Map<String, Object> mp = new HashMap<>();
                 StringBuilder kvpairsBuilder = new StringBuilder();
@@ -287,10 +285,10 @@ public class OpenSearchConverter {
                 if (kvpairsBuilder.length() > 0) {
                     mp.put(Constants.DEFAULT_KVPAIRS, kvpairsBuilder.substring(0, kvpairsBuilder.length() - 1));
                 }
-                return Tuple2.of(EMPTY_STRING_TUPLE2, mp);
+                return Tuple2.of(Tuple2.of(Constants.EMPTY_STRING, Constants.EMPTY_STRING), mp);
             }
         }
-        return Tuple2.of(EMPTY_STRING_TUPLE2, (Map<String, Object>)Collections.EMPTY_MAP);
+        return Tuple2.of(Tuple2.of(Constants.EMPTY_STRING, Constants.EMPTY_STRING), (Map<String, Object>)Collections.EMPTY_MAP);
     }
 
     private static Object resolveQueryAndFilterSQLExpr(SQLExpr expr) {
