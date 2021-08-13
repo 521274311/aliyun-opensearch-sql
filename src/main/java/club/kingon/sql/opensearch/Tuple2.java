@@ -4,7 +4,7 @@ package club.kingon.sql.opensearch;
  * @author dragons
  * @date 2020/12/22 18:42
  */
-public class Tuple2<T, P> {
+public class Tuple2<T, P> implements Cloneable {
     public T t1;
     public P t2;
 

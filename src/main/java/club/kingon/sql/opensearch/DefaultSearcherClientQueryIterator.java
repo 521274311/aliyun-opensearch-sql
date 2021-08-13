@@ -64,6 +64,10 @@ public class DefaultSearcherClientQueryIterator extends AbstractSearcherClientQu
     private JSONArray items = null;
 
     public DefaultSearcherClientQueryIterator(SearcherClient client, String sql) {
+       this(client, sql, null);
+    }
+
+    public DefaultSearcherClientQueryIterator(SearcherClient client, String sql, OpenSearchManager manager) {
         super();
         searcherClient = client;
         SQLStatement statement = SQLUtils.parseSingleStatement(sql, Constants.MYSQL_DB_TYPE);
@@ -72,7 +76,7 @@ public class DefaultSearcherClientQueryIterator extends AbstractSearcherClientQu
         MySqlSelectQueryBlock block = ((MySqlSelectQueryBlock)((SQLSelectStatement) statement).getSelect().getQuery());
         appNames = OpenSearchConverter.explainFrom(visitor);
         fetchField = OpenSearchConverter.explainFetchField(block);
-        Tuple2<Tuple2<String, String>, Map<String, Object>> queryAndFilterAndParams = OpenSearchConverter.explainWhere(block.getWhere());
+        Tuple2<Tuple2<String, String>, Map<String, Object>> queryAndFilterAndParams = OpenSearchConverter.explainWhere(block.getWhere(), manager);
         query = queryAndFilterAndParams.t1.t1;
         filter = queryAndFilterAndParams.t1.t2;
         queryProcessorNames = (List<String>) queryAndFilterAndParams.t2.get(Constants.QUERY_PROCESSOR_NAMES);
@@ -80,7 +84,7 @@ public class DefaultSearcherClientQueryIterator extends AbstractSearcherClientQu
         kvpairs = (String) queryAndFilterAndParams.t2.get(Constants.DEFAULT_KVPAIRS);
         distincts = OpenSearchConverter.explainDistinct(block);
         aggregates = OpenSearchConverter.explainAggregate(block, visitor);
-        sort = OpenSearchConverter.explainSort(block);
+        sort = OpenSearchConverter.explainSort(block, manager);
         Tuple2<Integer, Integer> offsetAndCount = OpenSearchConverter.explainStartAndHit(block.getLimit());
         if (offsetAndCount.t2 == null || offsetAndCount.t2 > Constants.MAX_ALL_HIT) {
             queryMode = SearchQueryModeEnum.SCROLL;
@@ -92,7 +96,6 @@ public class DefaultSearcherClientQueryIterator extends AbstractSearcherClientQu
             count = offsetAndCount.t2;
         }
     }
-
     /**
      *
      * @throws JSONException
@@ -106,7 +109,7 @@ public class DefaultSearcherClientQueryIterator extends AbstractSearcherClientQu
         if (count == 0) {
             return false;
         }
-        int num = count > batch ? batch : count;
+        int num = Math.min(count, batch);
         OpenSearchBuilderUtil.SearchParamsBuilder searchParamsBuilder = OpenSearchBuilderUtil.searchParamsBuilder(
                 OpenSearchBuilderUtil.configBuilder(appNames, offset, num, fetchField).kvpairs(kvpairs).build(), query)
                 .filter(filter)

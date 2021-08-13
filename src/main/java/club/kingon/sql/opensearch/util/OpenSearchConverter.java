@@ -1,7 +1,9 @@
 package club.kingon.sql.opensearch.util;
 
 import club.kingon.sql.opensearch.OpenSearchDqlException;
+import club.kingon.sql.opensearch.OpenSearchManager;
 import club.kingon.sql.opensearch.Tuple2;
+import club.kingon.sql.opensearch.support.util.OpenSearchCheckUtil;
 import com.alibaba.druid.sql.ast.SQLExpr;
 import com.alibaba.druid.sql.ast.SQLLimit;
 import com.alibaba.druid.sql.ast.expr.*;
@@ -38,9 +40,11 @@ public class OpenSearchConverter {
 
     private final static Logger log = LoggerFactory.getLogger(OpenSearchConverter.class);
 
-    private final static Tuple2<String, String> EMPTY_STRING_TUPLE2 = Tuple2.of(Constants.EMPTY_STRING, Constants.EMPTY_STRING);
-
     public static List<String> explainFrom(MySqlSchemaStatVisitor visitor) {
+        return explainFrom(visitor, null);
+    }
+
+    public static List<String> explainFrom(MySqlSchemaStatVisitor visitor, OpenSearchManager manager) {
         Set<TableStat.Name> names = visitor.getTables().keySet();
         List<String> appNames = new ArrayList<>(names.size());
         names.forEach(n -> appNames.add(n.getName()));
@@ -53,6 +57,10 @@ public class OpenSearchConverter {
      * @return Tuple2<start, hit>
      */
     public static Tuple2<Integer, Integer> explainStartAndHit(SQLLimit limit) {
+        return explainStartAndHit(limit, null);
+    }
+
+    public static Tuple2<Integer, Integer> explainStartAndHit(SQLLimit limit, OpenSearchManager manager) {
         Integer offset = null, count = null;
         if (limit != null) {
             if (limit.getOffset() != null) {
@@ -69,9 +77,13 @@ public class OpenSearchConverter {
     }
 
     public static List<String> explainFetchField(MySqlSelectQueryBlock block) {
+        return explainFetchField(block, null);
+    }
+
+    public static List<String> explainFetchField(MySqlSelectQueryBlock block, OpenSearchManager manager) {
         List<SQLSelectItem> sqlSelectItemList = block.getSelectList();
         if (sqlSelectItemList == null || sqlSelectItemList.size() <= 0
-                || sqlSelectItemList.get(0).getExpr() instanceof SQLAllColumnExpr) {
+            || sqlSelectItemList.get(0).getExpr() instanceof SQLAllColumnExpr) {
             return null;
         }
         List<String> result = new ArrayList<>();
@@ -109,8 +121,8 @@ public class OpenSearchConverter {
         return result;
     }
 
-    public static Tuple2<Tuple2<String, String>, Map<String, Object>> explainWhere(SQLExpr expr) {
-        Tuple2<Tuple2<String, String>, Map<String, Object>> queryAndFilter = (Tuple2<Tuple2<String, String>, Map<String, Object>>) resolveQueryAndFilterSQLExpr(expr, true);
+    public static Tuple2<Tuple2<String, String>, Map<String, Object>> explainWhere(SQLExpr expr, OpenSearchManager manager) {
+        Tuple2<Tuple2<String, String>, Map<String, Object>> queryAndFilter = (Tuple2<Tuple2<String, String>, Map<String, Object>>) resolveQueryAndFilterSQLExpr(expr, true, manager);
         if (Constants.EMPTY_STRING.equals(queryAndFilter.t1.t1)) {
             queryAndFilter.t1.t1 = null;
         }
@@ -144,46 +156,63 @@ public class OpenSearchConverter {
      * 下钻一级递归提取query和filter
      * @return Tuple2<query, filter>
      */
-    private static Tuple2<Tuple2<String, String>, Map<String, Object>> getQueryAndFilter(SQLBinaryOpExpr expr) {
+    private static Tuple2<Tuple2<String, String>, Map<String, Object>> getQueryAndFilter(SQLBinaryOpExpr expr, OpenSearchManager manager) {
         SQLExpr leftChildSqlExpr = null, rightChildSqlExpr = null;
         if (expr == null || ((leftChildSqlExpr = expr.getLeft()) == null & (rightChildSqlExpr = expr.getRight()) == null)) {
-            return Tuple2.of(EMPTY_STRING_TUPLE2, Collections.emptyMap());
+            return Tuple2.of(getEmptyStringTuple2(), Collections.emptyMap());
         }
         boolean leftOp, rightOp;
         String opName = getQueryAndFilterBinaryOperatorName(expr.getOperator()), opNameLower = opName.toLowerCase();
         if (!(leftOp = isBinary(leftChildSqlExpr)) & !(rightOp = isBinary(rightChildSqlExpr))) {
-            Object left = resolveQueryAndFilterSQLExpr(leftChildSqlExpr, false);
-            Object right = resolveQueryAndFilterSQLExpr(rightChildSqlExpr, false);
+            Object left = resolveQueryAndFilterSQLExpr(leftChildSqlExpr, false, manager);
+            Object right = resolveQueryAndFilterSQLExpr(rightChildSqlExpr, false, manager);
             // 使用like指定使用query
             if (Constants.LIKE.equals(opNameLower) || Constants.NOT_LIKE.equals(opNameLower)) {
+                String name = left.toString();
                 String value = right.toString();
                 boolean hasChinese = PatternUtil.hasChinese(value);
                 if (value != null && !value.isEmpty()) {
-                    if (value.charAt(0) != Constants.PERCENT_SIGN_CHARACTER) {
-                        if (!hasChinese) {
-                            value = Constants.HEAD_TERMINATOR + value;
+                    // 管理器获取索引是否支持模糊查询,若不支持则直接删除value中前后百分号
+                    if (manager != null && !OpenSearchCheckUtil.supportFuzzyQuery(manager.getSearchIndexFields(name))) {
+                        if (value.charAt(0) == Constants.PERCENT_SIGN_CHARACTER) {
+                            value = value.substring(1);
                         }
-                    } else {
-                        value = value.substring(1);
-                    }
-                    if (value.charAt(value.length() - 1) != Constants.PERCENT_SIGN_CHARACTER) {
-                        if (!hasChinese) {
-                            value = value + Constants.TAIL_TERMINATOR;
+                        if (value.charAt(value.length() - 1) == Constants.PERCENT_SIGN_CHARACTER) {
+                            value = value.substring(0, value.length() - 1);
                         }
-                    } else {
-                        value = value.substring(0, value.length() - 1);
                     }
-                    return Tuple2.of(Tuple2.of(left
+                    else {
+                        if (value.charAt(0) != Constants.PERCENT_SIGN_CHARACTER) {
+                            if (!hasChinese) {
+                                value = Constants.HEAD_TERMINATOR + value;
+                            }
+                        } else {
+                            value = value.substring(1);
+                        }
+                        if (value.charAt(value.length() - 1) != Constants.PERCENT_SIGN_CHARACTER) {
+                            if (!hasChinese) {
+                                value = value + Constants.TAIL_TERMINATOR;
+                            }
+                        } else {
+                            value = value.substring(0, value.length() - 1);
+                        }
+                    }
+
+                    return Tuple2.of(Tuple2.of(name
                             + Constants.COLON_SINGLE_QUOTES + value + Constants.SINGLE_QUOTES_MARK,
                         Constants.EMPTY_STRING), Collections.emptyMap());
                 }
-                return Tuple2.of(EMPTY_STRING_TUPLE2, Collections.emptyMap());
+                return Tuple2.of(Tuple2.of(Constants.EMPTY_STRING, Constants.EMPTY_STRING), Collections.emptyMap());
             }
             // 其他表达式统一使用filter
             else {
                 String name = left.toString(), value = right.toString();
                 if (isInnerParamName(name)) {
                     return resolveInnerParam(name, value);
+                }
+                // 添加管理器处理等号，针对属性字段不存在，索引字段存在属性转为query查询
+                if (manager != null && !manager.existsFilterAttribute(name) && manager.existsSearchIndex(name) && Constants.EQUAL_SIGN.equals(opName)) {
+                    return Tuple2.of(Tuple2.of(name + Constants.COLON_SINGLE_QUOTES + value + Constants.SINGLE_QUOTES_MARK, Constants.EMPTY_STRING), Collections.emptyMap());
                 }
                 if (rightChildSqlExpr instanceof SQLTextLiteralExpr) {
                     value = Constants.DOUBLE_QUOTES_MARK + value + Constants.DOUBLE_QUOTES_MARK;
@@ -192,8 +221,8 @@ public class OpenSearchConverter {
             }
         }
         else if (leftOp && rightOp){
-            Tuple2<Tuple2<String, String>, Map<String, Object>> left = (Tuple2<Tuple2<String, String>, Map<String, Object>>) resolveQueryAndFilterSQLExpr(leftChildSqlExpr, true);
-            Tuple2<Tuple2<String, String>, Map<String, Object>> right = (Tuple2<Tuple2<String, String>, Map<String, Object>>) resolveQueryAndFilterSQLExpr(rightChildSqlExpr, true);
+            Tuple2<Tuple2<String, String>, Map<String, Object>> left = (Tuple2<Tuple2<String, String>, Map<String, Object>>) resolveQueryAndFilterSQLExpr(leftChildSqlExpr, true, manager);
+            Tuple2<Tuple2<String, String>, Map<String, Object>> right = (Tuple2<Tuple2<String, String>, Map<String, Object>>) resolveQueryAndFilterSQLExpr(rightChildSqlExpr, true, manager);
             // query ANDNOT 支持
             if (Constants.Q_AND.equals(opName) && rightChildSqlExpr instanceof SQLBinaryOpExpr && Constants.NOT_LIKE.equals(((SQLBinaryOpExpr) rightChildSqlExpr).getOperator().name_lcase)) {
                 opName = Constants.ANDNOT;
@@ -202,15 +231,15 @@ public class OpenSearchConverter {
         }
         // 复合表达式仅支持filter
         else if (leftOp) {
-            Tuple2<Tuple2<String, String>, Map<String, Object>> left = (Tuple2<Tuple2<String, String>, Map<String, Object>>) resolveQueryAndFilterSQLExpr(leftChildSqlExpr, true);
-            String right = getFilterValue(rightChildSqlExpr);
+            Tuple2<Tuple2<String, String>, Map<String, Object>> left = (Tuple2<Tuple2<String, String>, Map<String, Object>>) resolveQueryAndFilterSQLExpr(leftChildSqlExpr, true, manager);
+            String right = getFilterValue(rightChildSqlExpr, manager);
             if (!Constants.EMPTY_STRING.equals(left.t1.t2)) {
                 left.t1.t2 = left.t1.t2 + opName + right;
             }
             return left;
         } else {
-            Object left = resolveQueryAndFilterSQLExpr(leftChildSqlExpr, false);
-            Tuple2<Tuple2<String, String>, Map<String, Object>> right = (Tuple2<Tuple2<String, String>, Map<String, Object>>) resolveQueryAndFilterSQLExpr(rightChildSqlExpr, true);
+            Object left = resolveQueryAndFilterSQLExpr(leftChildSqlExpr, false, manager);
+            Tuple2<Tuple2<String, String>, Map<String, Object>> right = (Tuple2<Tuple2<String, String>, Map<String, Object>>) resolveQueryAndFilterSQLExpr(rightChildSqlExpr, true, manager);
             if (!Constants.EMPTY_STRING.equals(right.t1.t2)) {
                 right.t1.t2 = left +opName + right.t1.t2;
             }
@@ -232,12 +261,12 @@ public class OpenSearchConverter {
         } else if (Constants.DEFAULT_KVPAIRS.equals(name)) {
             mp.put(Constants.DEFAULT_KVPAIRS, value);
         }
-        return Tuple2.of(EMPTY_STRING_TUPLE2, mp);
+        return Tuple2.of(getEmptyStringTuple2(), mp);
     }
 
-    private static Tuple2<Tuple2<String, String>, Map<String, Object>> resolveInnerParam(SQLInListExpr expr) {
+    private static Tuple2<Tuple2<String, String>, Map<String, Object>> resolveInnerParam(SQLInListExpr expr, OpenSearchManager manager) {
         String exp = expr.isNot() ? Constants.NOTIN : Constants.IN;
-        String name = expr.getExpr() instanceof SQLIdentifierExpr ? ((SQLIdentifierExpr)expr.getExpr()).getLowerName() : resolveQueryAndFilterSQLExpr(expr.getExpr()).toString();
+        String name = expr.getExpr() instanceof SQLIdentifierExpr ? ((SQLIdentifierExpr)expr.getExpr()).getLowerName() : resolveQueryAndFilterSQLExpr(expr.getExpr(), manager).toString();
         // 檢查qp是否在in中
         if (Constants.IN.equals(exp)) {
             if (Constants.QUERY_PROCESSOR_NAMES.equals(name)) {
@@ -251,7 +280,7 @@ public class OpenSearchConverter {
                 if (!qpNames.isEmpty()) {
                     mp.put(Constants.QUERY_PROCESSOR_NAMES, qpNames);
                 }
-                return Tuple2.of(EMPTY_STRING_TUPLE2, mp);
+                return Tuple2.of(getEmptyStringTuple2(), mp);
             } else if (Constants.FIRST_RANK_NAMES.contains(name)) {
                 Map<String, Object> mp = new HashMap<>();
                 expr.getTargetList().stream().findFirst().ifPresent(e -> {
@@ -259,7 +288,7 @@ public class OpenSearchConverter {
                         mp.put(Constants.DEFAULT_FIRST_RANK_NAME, ((SQLValuableExpr) e).getValue());
                     }
                 });
-                return Tuple2.of(EMPTY_STRING_TUPLE2, mp);
+                return Tuple2.of(getEmptyStringTuple2(), mp);
             } else if (Constants.SECOND_RANK_NAMES.contains(name)) {
                 Map<String, Object> mp = new HashMap<>();
                 expr.getTargetList().stream().findFirst().ifPresent(e -> {
@@ -267,7 +296,7 @@ public class OpenSearchConverter {
                         mp.put(Constants.DEFAULT_SECOND_RANK_NAME, ((SQLValuableExpr) e).getValue());
                     }
                 });
-                return Tuple2.of(EMPTY_STRING_TUPLE2, mp);
+                return Tuple2.of(getEmptyStringTuple2(), mp);
             } else if (Constants.RE_RANK_SIZE_NAMES.contains(name)) {
                 Map<String, Object> mp = new HashMap<>();
                 expr.getTargetList().stream().findFirst().ifPresent(e -> {
@@ -275,7 +304,7 @@ public class OpenSearchConverter {
                         mp.put(Constants.DEFAULT_RE_RANK_SIZE_NAME, ((SQLValuableExpr) e).getValue());
                     }
                 });
-                return Tuple2.of(EMPTY_STRING_TUPLE2, mp);
+                return Tuple2.of(getEmptyStringTuple2(), mp);
             } else if (Constants.DEFAULT_KVPAIRS.equals(name)) {
                 Map<String, Object> mp = new HashMap<>();
                 StringBuilder kvpairsBuilder = new StringBuilder();
@@ -287,14 +316,14 @@ public class OpenSearchConverter {
                 if (kvpairsBuilder.length() > 0) {
                     mp.put(Constants.DEFAULT_KVPAIRS, kvpairsBuilder.substring(0, kvpairsBuilder.length() - 1));
                 }
-                return Tuple2.of(EMPTY_STRING_TUPLE2, mp);
+                return Tuple2.of(getEmptyStringTuple2(), mp);
             }
         }
-        return Tuple2.of(EMPTY_STRING_TUPLE2, (Map<String, Object>)Collections.EMPTY_MAP);
+        return Tuple2.of(getEmptyStringTuple2(), (Map<String, Object>)Collections.EMPTY_MAP);
     }
 
-    private static Object resolveQueryAndFilterSQLExpr(SQLExpr expr) {
-        return resolveQueryAndFilterSQLExpr(expr, true);
+    private static Object resolveQueryAndFilterSQLExpr(SQLExpr expr, OpenSearchManager manager) {
+        return resolveQueryAndFilterSQLExpr(expr, true, manager);
     }
 
     private static boolean isInnerParamName(String name) {
@@ -306,19 +335,19 @@ public class OpenSearchConverter {
      * @param binary 是否是表达式类型expr，为false表示表达式一部分的expr，例如SQLMethodInvokeExpr类型获取的结果只是一个值域
      * @return
      */
-    private static Object resolveQueryAndFilterSQLExpr(SQLExpr expr, boolean binary) {
+    private static Object resolveQueryAndFilterSQLExpr(SQLExpr expr, boolean binary, OpenSearchManager manager) {
         // binary
-        if (expr instanceof SQLInListExpr) return getQueryAndFilter((SQLInListExpr)expr);
-        if (expr instanceof SQLBinaryOpExpr) return getQueryAndFilter((SQLBinaryOpExpr) expr);
-        if (expr instanceof SQLBetweenExpr) return getQueryAndFilter((SQLBetweenExpr) expr);
+        if (expr instanceof SQLInListExpr) return getQueryAndFilter((SQLInListExpr)expr, manager);
+        if (expr instanceof SQLBinaryOpExpr) return getQueryAndFilter((SQLBinaryOpExpr) expr, manager);
+        if (expr instanceof SQLBetweenExpr) return getQueryAndFilter((SQLBetweenExpr) expr, manager);
 
         // maybe binary or not binary, current version is not binary
-        if (expr instanceof SQLMethodInvokeExpr) return getQueryAndFilter((SQLMethodInvokeExpr) expr, false);
+        if (expr instanceof SQLMethodInvokeExpr) return getQueryAndFilter((SQLMethodInvokeExpr) expr, false, manager);
         // not binary
-        if (expr instanceof SQLDefaultExpr) return getQueryAndFilter((SQLDefaultExpr) expr);
-        if (expr instanceof SQLIdentifierExpr) return getQueryAndFilter((SQLIdentifierExpr) expr);
-        if (expr instanceof SQLNumericLiteralExpr) return getQueryAndFilter((SQLNumericLiteralExpr) expr);
-        if (expr instanceof SQLTextLiteralExpr) return getQueryAndFilter((SQLTextLiteralExpr) expr);
+        if (expr instanceof SQLDefaultExpr) return getQueryAndFilter((SQLDefaultExpr) expr, manager);
+        if (expr instanceof SQLIdentifierExpr) return getQueryAndFilter((SQLIdentifierExpr) expr, manager);
+        if (expr instanceof SQLNumericLiteralExpr) return getQueryAndFilter((SQLNumericLiteralExpr) expr, manager);
+        if (expr instanceof SQLTextLiteralExpr) return getQueryAndFilter((SQLTextLiteralExpr) expr, manager);
         return binary ? Tuple2.of(Tuple2.of(Constants.EMPTY_STRING, Constants.EMPTY_STRING), new HashMap<>()) : "";
     }
 
@@ -329,42 +358,42 @@ public class OpenSearchConverter {
         return false;
     }
 
-    private static String getQueryAndFilter(SQLDefaultExpr expr) {
+    private static String getQueryAndFilter(SQLDefaultExpr expr, OpenSearchManager manager) {
         return "default";
     }
 
-    private static String getQueryAndFilter(SQLIdentifierExpr expr) {
+    private static String getQueryAndFilter(SQLIdentifierExpr expr, OpenSearchManager manager) {
         return expr.getName();
     }
 
-    private static Object getQueryAndFilter(SQLNumericLiteralExpr expr) {
+    private static Object getQueryAndFilter(SQLNumericLiteralExpr expr, OpenSearchManager manager) {
         return expr.getNumber();
     }
 
-    private static String getQueryAndFilter(SQLTextLiteralExpr expr) {
+    private static String getQueryAndFilter(SQLTextLiteralExpr expr, OpenSearchManager manager) {
         return expr.getText();
     }
 
     /**
      * https://help.aliyun.com/document_detail/204346.html
      */
-    private static String getQueryAndFilter(SQLMethodInvokeExpr expr, boolean op) {
+    private static String getQueryAndFilter(SQLMethodInvokeExpr expr, boolean op, OpenSearchManager manager) {
         // OpenSearch 函数不支持单引号, 此处需转换
         return expr.toString().replace("'", "\"");
     }
 
-    private static Tuple2<Tuple2<String, String>, Map<String, Object>> getQueryAndFilter(SQLBetweenExpr expr) {
+    private static Tuple2<Tuple2<String, String>, Map<String, Object>> getQueryAndFilter(SQLBetweenExpr expr, OpenSearchManager manager) {
         SQLExpr textExpr = expr.testExpr;
         return Tuple2.of(Tuple2.of(Constants.EMPTY_STRING, ((SQLIdentifierExpr) textExpr).getLowerName() + ":["
             + ((SQLValuableExpr) expr.beginExpr).getValue() + "," + ((SQLValuableExpr) expr.endExpr).getValue() + "]"), Collections.emptyMap());
     }
 
-    private static Tuple2<Tuple2<String, String>, Map<String, Object>> getQueryAndFilter(SQLInListExpr expr) {
+    private static Tuple2<Tuple2<String, String>, Map<String, Object>> getQueryAndFilter(SQLInListExpr expr, OpenSearchManager manager) {
         String exp = expr.isNot() ? Constants.NOTIN : Constants.IN;
-        Object name = expr.getExpr() instanceof SQLIdentifierExpr ? ((SQLIdentifierExpr)expr.getExpr()).getLowerName() : resolveQueryAndFilterSQLExpr(expr.getExpr());
+        Object name = expr.getExpr() instanceof SQLIdentifierExpr ? ((SQLIdentifierExpr)expr.getExpr()).getLowerName() : resolveQueryAndFilterSQLExpr(expr.getExpr(), manager);
         // 檢查名称是否内部参数名称
         if (isInnerParamName(name.toString())) {
-            return resolveInnerParam(expr);
+            return resolveInnerParam(expr, manager);
         }
         StringBuilder builder = new StringBuilder(exp + "(" + name + ", \"");
         for (int i = 0; i < expr.getTargetList().size(); i++) {
@@ -377,13 +406,13 @@ public class OpenSearchConverter {
         return Tuple2.of(Tuple2.of(Constants.EMPTY_STRING, builder.toString()), Collections.emptyMap());
     }
 
-    private static String getFilterValue(SQLExpr expr) {
+    private static String getFilterValue(SQLExpr expr, OpenSearchManager manager) {
         if (expr instanceof SQLTextLiteralExpr) {
             return Constants.DOUBLE_QUOTES_MARK + ((SQLTextLiteralExpr) expr).getText() + Constants.DOUBLE_QUOTES_MARK;
         } else if (expr instanceof SQLNumericLiteralExpr) {
             return ((SQLNumericLiteralExpr) expr).getNumber().toString();
         }
-        return resolveQueryAndFilterSQLExpr(expr, false).toString();
+        return resolveQueryAndFilterSQLExpr(expr, false, manager).toString();
     }
 
     private static String getQueryAndFilterBinaryOperatorName(SQLBinaryOperator op) {
@@ -554,16 +583,20 @@ public class OpenSearchConverter {
     /**
      * https://help.aliyun.com/document_detail/180032.html
      */
-    public static Sort explainSort(MySqlSelectQueryBlock block) {
+    public static Sort explainSort(MySqlSelectQueryBlock block, OpenSearchManager manager) {
         if (block.getOrderBy() == null) {
             return null;
         }
         List<SQLSelectOrderByItem> orderByItems = block.getOrderBy().getItems();
         List<SortField> sortFields = new ArrayList<>(orderByItems.size());
         orderByItems.forEach(item -> sortFields.add(
-            new SortField(resolveQueryAndFilterSQLExpr(item.getExpr(), false).toString(),
+            new SortField(resolveQueryAndFilterSQLExpr(item.getExpr(), false, manager).toString(),
                 item.getType() == null || Constants.INCREASE.equals(item.getType().name) ? Order.INCREASE : Order.DECREASE)));
         return !sortFields.isEmpty() ? new Sort(sortFields) : null;
+    }
+
+    private static Tuple2<String, String> getEmptyStringTuple2() {
+        return Tuple2.of(Constants.EMPTY_STRING, Constants.EMPTY_STRING);
     }
 }
 

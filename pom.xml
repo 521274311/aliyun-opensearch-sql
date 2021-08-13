@@ -6,7 +6,7 @@
 
     <groupId>club.kingons.plugins.sql</groupId>
     <artifactId>aliyun-opensearch-sql</artifactId>
-    <version>0.0.4-SNAPSHOT</version>
+    <version>0.1.0-SNAPSHOT</version>
     <build>
         <plugins>
             <plugin>
@@ -46,6 +46,12 @@
             <groupId>com.aliyun.opensearch</groupId>
             <artifactId>aliyun-sdk-opensearch</artifactId>
             <version>${opensearch.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.aliyun</groupId>
+            <artifactId>aliyun-java-sdk-core</artifactId>
+            <version>4.5.25</version>
         </dependency>
     </dependencies>
 
