@@ -1,13 +1,16 @@
 package club.kingon.sql.opensearch;
 
 import club.kingon.sql.opensearch.api.Endpoint;
+import club.kingon.sql.opensearch.parser.DefaultOpenSearchSQLParser;
+import club.kingon.sql.opensearch.parser.OpenSearchQueryEntry;
+import club.kingon.sql.opensearch.parser.OpenSearchSQLParser;
 import club.kingon.sql.opensearch.support.DefaultOpenSearchManager;
 import com.aliyun.opensearch.SearcherClient;
-import com.aliyun.opensearch.sdk.generated.search.general.SearchResult;
+import com.aliyun.opensearch.sdk.generated.search.Distinct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Iterator;
+import java.util.Set;
 
 /**
  * @author dragons
@@ -20,6 +23,8 @@ public class DefaultOpenSearchSqlClient implements OpenSearchSqlClient {
     private OpenSearchManager openSearchManager;
 
     private SearcherClient searcherClient;
+
+    private OpenSearchSQLParser sqlParser;
 
     public DefaultOpenSearchSqlClient(String accessKey, String secret, Endpoint endpoint) {
         this(accessKey, secret, endpoint, null);
@@ -44,11 +49,17 @@ public class DefaultOpenSearchSqlClient implements OpenSearchSqlClient {
     public DefaultOpenSearchSqlClient(String accessKey, String secret, Endpoint endpoint, boolean intranet, String appName, long startWaitMills) {
         openSearchManager = new DefaultOpenSearchManager(accessKey, secret,endpoint, intranet, appName, startWaitMills);
         searcherClient = new SearcherClient(openSearchManager.getOpenSearchClient());
+        sqlParser = new DefaultOpenSearchSQLParser(openSearchManager);
     }
 
     @Override
-    public OpenSearchQueryIterator query(String sql) {
-        return new DefaultOpenSearchQueryIterator(searcherClient, sql, openSearchManager);
+    public OpenSearchQueryIterator query(String sql, Set<Distinct> distincts) {
+        OpenSearchQueryEntry config = sqlParser.parse(sql);
+        // 支持distinct参数化注入
+        if (distincts != null && !distincts.isEmpty()) {
+            config.setDistincts(distincts);
+        }
+        return new DefaultOpenSearchQueryIterator(searcherClient, config);
     }
 
 
