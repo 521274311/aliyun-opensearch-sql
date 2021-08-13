@@ -6,7 +6,6 @@ import club.kingon.sql.opensearch.util.OpenSearchConverter;
 import club.kingon.sql.opensearch.util.ResponseConstants;
 import com.alibaba.druid.sql.SQLUtils;
 import com.alibaba.druid.sql.ast.SQLStatement;
-import com.alibaba.druid.sql.ast.expr.SQLBinaryOpExpr;
 import com.alibaba.druid.sql.ast.statement.SQLSelectStatement;
 import com.alibaba.druid.sql.dialect.mysql.ast.statement.MySqlSelectQueryBlock;
 import com.alibaba.druid.sql.dialect.mysql.visitor.MySqlSchemaStatVisitor;
@@ -21,7 +20,6 @@ import com.aliyun.opensearch.sdk.generated.search.general.SearchResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -34,10 +32,10 @@ import java.util.Set;
  * @author dragons
  * @date 2020/12/23 18:29
  */
-public class DefaultSearcherClientQueryIterator extends AbstractSearcherClientQueryIterator
-        implements SearcherClientQueryIterator {
+public class DefaultOpenSearchQueryIterator extends AbstractOpenSearchQueryIterator
+        implements OpenSearchQueryIterator {
 
-    private final static Logger log = LoggerFactory.getLogger(DefaultSearcherClientQueryIterator.class);
+    private final static Logger log = LoggerFactory.getLogger(DefaultOpenSearchQueryIterator.class);
 
     private final SearcherClient searcherClient;
     private final List<String> appNames;
@@ -63,11 +61,11 @@ public class DefaultSearcherClientQueryIterator extends AbstractSearcherClientQu
     private boolean alreadyExplain = false;
     private JSONArray items = null;
 
-    public DefaultSearcherClientQueryIterator(SearcherClient client, String sql) {
+    public DefaultOpenSearchQueryIterator(SearcherClient client, String sql) {
        this(client, sql, null);
     }
 
-    public DefaultSearcherClientQueryIterator(SearcherClient client, String sql, OpenSearchManager manager) {
+    public DefaultOpenSearchQueryIterator(SearcherClient client, String sql, OpenSearchManager manager) {
         super();
         searcherClient = client;
         SQLStatement statement = SQLUtils.parseSingleStatement(sql, Constants.MYSQL_DB_TYPE);

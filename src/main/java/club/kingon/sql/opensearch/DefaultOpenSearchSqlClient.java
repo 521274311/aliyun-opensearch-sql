@@ -47,8 +47,8 @@ public class DefaultOpenSearchSqlClient implements OpenSearchSqlClient {
     }
 
     @Override
-    public Iterator<SearchResult> query(String sql) {
-        return new DefaultSearcherClientQueryIterator(searcherClient, sql, openSearchManager);
+    public OpenSearchQueryIterator query(String sql) {
+        return new DefaultOpenSearchQueryIterator(searcherClient, sql, openSearchManager);
     }
 
 
