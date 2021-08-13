@@ -61,7 +61,7 @@ config.hit=10
 ```
 
 (**PS: ~~想要触发query查询使用name like '%xxx%' 或 name="xxx" 均可~~
-v0.0.3-SNAPSHOT版本仅支持使用 name like '%xxx%查询'**)
+v0.0.3-SNAPSHOT版本仅支持使用 name like '%xxx%查询'，v0.1.0-SNAPSHOT版本在client传入appName情况下支持自动识别,即name="xxx"或name like 'xxx'或name like '%xxxx%'均可**)
 
 #### 普通字段去重查询示例
 ```sql
@@ -83,6 +83,30 @@ limit 0, 100
 (PS：建议OpenSearch默认展示字段配置全部展示字段)  
 
 #### 获取SearchResult对象使用示例（默认Iterator.next()迭代一次搜索）：
+
+版本: v0.1.0-SNAPSHOT调用示例
+```java
+import club.kingon.sql.opensearch.DefaultOpenSearchSqlClient;
+import club.kingon.sql.opensearch.OpenSearchSqlClient;
+import club.kingon.sql.opensearch.api.Endpoint;
+import com.aliyun.opensearch.sdk.generated.search.general.SearchResult;
+
+import java.util.Iterator;
+
+public class Test {
+    public static void main(String[] args) {
+        // APP_NAME可以传null，若传正确的APP_NAME将会对SQL语法做自动适配
+        String ACCESS_KEY = "xxx", SECRET = "xxx", APP_NAME = "app_name";
+        String SQL = "select * from " + APP_NAME + " where name like '%咸鱼%' limit 10";
+        OpenSearchSqlClient client = new DefaultOpenSearchSqlClient(ACCESS_KEY, SECRET, Endpoint.SHENZHEN, APP_NAME);
+        Iterator<SearchResult> iterator = client.query(SQL);
+        while (iterator.hasNext()) {
+          System.out.println(iterator.next());
+        }
+    }
+}
+```
+版本: v0.0.3-SNAPSHOT调用示例
 ```java
 import com.aliyun.opensearch.OpenSearchClient;
 import com.aliyun.opensearch.SearcherClient;
