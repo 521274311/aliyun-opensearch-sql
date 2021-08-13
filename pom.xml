@@ -33,6 +33,7 @@
         <opensearch.version>3.5.1</opensearch.version>
         <druid.version>1.2.6</druid.version>
         <hutool.version>5.4.3</hutool.version>
+        <aliyun-sdk.version>4.5.25</aliyun-sdk.version>
     </properties>
 
     <dependencies>
@@ -51,7 +52,7 @@
         <dependency>
             <groupId>com.aliyun</groupId>
             <artifactId>aliyun-java-sdk-core</artifactId>
-            <version>4.5.25</version>
+            <version>${aliyun-sdk.version}</version>
         </dependency>
     </dependencies>
 
