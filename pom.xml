@@ -49,17 +49,4 @@
         </dependency>
     </dependencies>
 
-    <distributionManagement>
-        <repository>
-            <id>release</id>
-            <name>release</name>
-            <url>http://172.18.54.178:8996/repository/maven-releases/</url>
-        </repository>
-
-        <snapshotRepository>
-            <id>snapshots</id>
-            <name>release</name>
-            <url>http://172.18.54.178:8996/repository/maven-snapshots/</url>
-        </snapshotRepository>
-    </distributionManagement>
 </project>
