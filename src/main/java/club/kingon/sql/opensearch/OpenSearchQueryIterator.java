@@ -11,7 +11,7 @@ import java.util.Iterator;
  * @author dragons
  * @date 2020-12-23 17:43
  */
-public interface OpenSearchQueryIterator extends Iterator<SearchResult> {
+public interface OpenSearchQueryIterator extends Iterator<SearchResult>, Expression<String> {
     boolean hasNextOne();
 
     JSONObject nextOne();

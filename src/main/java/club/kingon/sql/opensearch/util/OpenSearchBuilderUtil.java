@@ -1,5 +1,7 @@
 package club.kingon.sql.opensearch.util;
 
+import club.kingon.sql.opensearch.SearchQueryModeEnum;
+import club.kingon.sql.opensearch.parser.OpenSearchQueryEntry;
 import com.aliyun.opensearch.sdk.generated.search.*;
 
 import java.util.List;
@@ -233,6 +235,27 @@ public class OpenSearchBuilderUtil {
 
     public static SearchParamsBuilder searchParamsBuilder(Config config, String query) {
         return new SearchParamsBuilder(config, query);
+    }
+
+    public static SearchParams builder(OpenSearchQueryEntry data) {
+        SearchParamsBuilder searchParamsBuilder = searchParamsBuilder(
+            configBuilder(data.getAppNames(), data.getOffset(), Math.min(data.getCount(), data.getBatch()), data.getFetchField()).kvpairs(data.getKvpairs()).build(),
+            data.getQuery()
+        ).filter(data.getFilter())
+            // 支持设置qp
+            .queryProcessorNames(data.getQueryProcessorNames())
+            // 支持粗排、精排表达式
+            .rank(data.getRank())
+            .sort(data.getSort());
+        // 设置模式
+        if (data.getQueryMode() == SearchQueryModeEnum.HIT) {
+            // 添加去重、聚合
+            searchParamsBuilder.distincts(data.getDistincts()).aggregates(data.getAggregates());
+        } else if (data.getQueryMode() == SearchQueryModeEnum.SCROLL) {
+            // 添加滚动查询
+            searchParamsBuilder.deepPaging(data.getDeepPaging());
+        }
+        return searchParamsBuilder.build();
     }
 
     public static SearchParamsBuilder searchParamsBuilder(SearchParams searchParams) {

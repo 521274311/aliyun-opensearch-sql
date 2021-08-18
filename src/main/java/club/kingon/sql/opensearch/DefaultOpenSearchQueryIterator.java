@@ -61,24 +61,9 @@ public class DefaultOpenSearchQueryIterator extends AbstractOpenSearchQueryItera
             return false;
         }
         int num = Math.min(data.getCount(), data.getBatch());
-        OpenSearchBuilderUtil.SearchParamsBuilder searchParamsBuilder = OpenSearchBuilderUtil.searchParamsBuilder(
-                OpenSearchBuilderUtil.configBuilder(data.getAppNames(), data.getOffset(), num, data.getFetchField()).kvpairs(data.getKvpairs()).build(), data.getQuery())
-                .filter(data.getFilter())
-                // 支持设置qp
-                .queryProcessorNames(data.getQueryProcessorNames())
-                // 支持粗排、精排表达式
-                .rank(data.getRank())
-                .sort(data.getSort());
         while (retry-- >= 0) {
             try {
-                if (data.getQueryMode() == SearchQueryModeEnum.HIT) {
-                    // 添加去重、聚合
-                    searchParamsBuilder.distincts(data.getDistincts()).aggregates(data.getAggregates());
-                } else if (data.getQueryMode() == SearchQueryModeEnum.SCROLL) {
-                    // 添加滚动查询
-                    searchParamsBuilder.deepPaging(data.getDeepPaging());
-                }
-                SearchParams searchParams = searchParamsBuilder.build();
+                SearchParams searchParams = OpenSearchBuilderUtil.builder(data);
                 if (log.isDebugEnabled()) {
                     log.debug("SearchParams: {}", searchParams);
                 }
@@ -228,5 +213,10 @@ public class DefaultOpenSearchQueryIterator extends AbstractOpenSearchQueryItera
 
     public void setRetryTimeInterval(long retryTimeInterval) {
         this.retryTimeInterval = retryTimeInterval;
+    }
+
+    @Override
+    public String express() {
+        return data == null ? "" : OpenSearchBuilderUtil.builder(data).toString();
     }
 }
