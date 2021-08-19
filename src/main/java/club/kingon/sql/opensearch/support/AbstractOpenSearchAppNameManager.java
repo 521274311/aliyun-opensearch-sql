@@ -26,8 +26,6 @@ public abstract class AbstractOpenSearchAppNameManager extends AbstractOpenSearc
 
     private volatile String appName;
 
-    protected final Object appNameSign = new Object();
-
     private boolean enableAppName = true;
 
     public AbstractOpenSearchAppNameManager(String accessKey, String secret, Endpoint endpoint, String appName) {

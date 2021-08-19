@@ -24,19 +24,11 @@ public abstract class AbstractOpenSearchAppSchemaManager extends AbstractOpenSea
 
     private final static Logger log = LoggerFactory.getLogger(AbstractOpenSearchAppSchemaManager.class);
 
-    private final static String TIMER_THREAD_NAME_PREFIX = "opsh-scme-thread-";
-
-    private final static long API_INVOKE_INTERVAL = 20000L;
-
     private Map<String, Schema> versionSchemaMap;
 
     private Map<String, Indexes> indexesMap;
 
-    private Thread asyncRefreshInfoThread;
-
     protected boolean enableSchema = true;
-
-    protected final Object appSchemaSign = new Object();
 
     public AbstractOpenSearchAppSchemaManager(String accessKey, String secret, Endpoint endpoint, String appName) {
         this(accessKey, secret, endpoint, false, appName);
