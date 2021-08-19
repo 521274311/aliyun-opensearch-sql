@@ -7,20 +7,45 @@
 ##### 2.需要查询的字段若支持设置为属性字段则添加到属性字段
 ##### 3.默认展示字段建议添加全部字段, 在具体业务中指定需要返回的字段即可.
 #### SQL使用语法（同Mysql语法）：  
+### 查询:  
 ```sql
 select  
-        [Distinct + attribute_field_name(属性字段)]  
-        [count,sum,max,min(聚合) + attribute_field_name(属性字段)]  
-        [field_name(表字段)..]  
+        [Distinct + attribute_field_name(/*属性字段*/)]  
+        [count,sum,max,min + attribute_field_name(/*属性字段*/)]  
+        [field_name(/*表字段*/)..]  
 from [appName1],[appName2],..  
 where  
-        ([index_field_name(索引字段)[=|like]character] [..OR|AND])  
+        ([index_field_name(/*索引字段*/)[=|like]character] [..OR|AND])  
         [..AND|OR]  
-        ([index_field_name(索引字段)[=|>|>=|<|<=|in|between]number|literal] [..OR|AND])  
-group by [attribute_field_name(属性字段)]  
-order by [field_name(表字段)] [asc|desc]..  
+        ([index_field_name(/*索引字段*/)[=|>|>=|<|<=|in|between]number|literal] [..OR|AND])  
+group by [attribute_field_name(/*属性字段*/)]  
+order by [field_name(/*表字段*/)] [asc|desc]..  
 limit min,count
 ```
+### 插入:
+```sql
+-- 当前版本仅支持value方式插入, insert select 将在后续版本完成
+-- 建议使用时将字段名指定，防止未指定导致顺序错乱
+-- app_name可忽略
+insert into app_name.table_name(field_name1, field_name2, ...) values(value1, value2, ...)
+```
+
+### 修改:
+```sql
+-- 当前仅支持通过主键条字段条件修改文档, 仅支持 id = xxx 或 id in (xxx, xxx) 方式
+-- 必须设置where条件
+-- app_name可忽略
+update app_name.table_name set field_name1=value1 and field_name2=value2 where id in (1, 2, 3)
+```
+
+### 删除:
+```sql
+-- 当前仅支持通过主键字段删除文档, 仅支持 primary_key = xxx 或 primary_key in (xxx, xxx) 方式
+-- 必须设置where条件
+-- app_name可忽略
+delete from app_name.table_name where id in (1, 2)
+```
+
 ### 示例数据源
 AppName: app_name  
 TableName: person
@@ -93,43 +118,71 @@ import club.kingon.sql.opensearch.OpenSearchSqlClient;
 import club.kingon.sql.opensearch.api.Endpoint;
 import club.kingon.sql.opensearch.entry.OpenSearchQueryResult;
 import com.alibaba.fastjson.TypeReference;
+import com.aliyun.opensearch.sdk.generated.commons.OpenSearchResult;
 import com.aliyun.opensearch.sdk.generated.search.general.SearchResult;
 
 import java.util.Iterator;
 
 public class Test {
+
+    public static void queryDemo(OpenSearchSqlClient client) {
+          String SQL = "select * from " + APP_NAME + " where name like '%咸鱼%' limit 10";
+          OpenSearchQueryIterator it1 = client.query(SQL);
+          // v0.1.0-SNAPSHOT版本后hasNext方法不对结果做校验, 转而使用OpenSearchQueryIterator.hasSuccessfulNext()方法对结果状态与数据进行校验
+          while (it1.hasNext()) {
+                System.out.println(it1.next());
+          }
+      
+          // 使用hasSuccessfulNext
+          OpenSearchQueryIterator it2 = client.query(SQL);
+          while (it2.hasSuccessfulNext()) {
+              // 获取指定结构Bean, 需继承QueryObject
+              class A extends club.kingon.sql.opensearch.entry.QueryObject {
+                  private String name;
+          
+                  public String getName() {
+                     return name;
+                  }
+          
+                  @Override
+                  public String toString() {
+                     return "A{" +
+                             "name='" + name + '\'' +
+                               '}';
+                  }
+              }
+              OpenSearchQueryResult<A> result = it1.next(new TypeReference<OpenSearchQueryResult<A>>());
+              System.out.println(result);
+        }
+    }
+  
+    public static void insertDemo(OpenSearchSqlClient client) {
+        String SQL = "insert into person(id, name) values(1, '咸鱼')";
+        OpenSearchResult result = client.insert(SQL);
+        System.out.println(result.getResult());
+    }
+  
+    public static void updateDemo(OpenSearchSqlClient client) {
+        String SQL = "update person set name='咸鱼...' where id=1";
+        OpenSearchResult result = client.update(SQL);
+        System.out.println(result.getResult());
+    }
+  
+    public static void deleteDemo(OpenSearchSqlClient client) {
+        String SQL = "delete from person where id=1";
+        OpenSearchResult result = client.delete(SQL);
+        System.out.println(result.getResult());
+    }
+  
     public static void main(String[] args) {
         // APP_NAME可以传null，若传正确的APP_NAME将会对SQL语法做自动适配
         String ACCESS_KEY = "xxx", SECRET = "xxx", APP_NAME = "app_name";
-        String SQL = "select * from " + APP_NAME + " where name like '%咸鱼%' limit 10";
         OpenSearchSqlClient client = new DefaultOpenSearchSqlClient(ACCESS_KEY, SECRET, Endpoint.SHENZHEN, APP_NAME);
-        OpenSearchQueryIterator it1 = client.query(SQL);
-        // v0.1.0-SNAPSHOT版本后hasNext方法不对结果做校验, 转而使用OpenSearchQueryIterator.hasSuccessfulNext()方法对结果状态与数据进行校验
-        while (it1.hasNext()) {
-            System.out.println(it1.next());
-        }
     
-        // 使用hasSuccessfulNext
-      OpenSearchQueryIterator it2 = client.query(SQL);
-        while (it2.hasSuccessfulNext()) {
-          // 获取指定结构Bean, 需继承QueryObject
-          class A extends club.kingon.sql.opensearch.entry.QueryObject {
-                private String name;
-        
-                public String getName() {
-                  return name;
-                }
-        
-                @Override
-                public String toString() {
-                  return "A{" +
-                          "name='" + name + '\'' +
-                          '}';
-                }
-            }
-          OpenSearchQueryResult<A> result = it1.next(new TypeReference<OpenSearchQueryResult<A>>());
-          System.out.println(result);
-        }
+        insertDemo(client);
+        updateDemo(client);
+        queryDemo(client);
+        deleteDemo(client);
     }
 }
 ```
