@@ -121,5 +121,28 @@ public class QueryResult<T> implements Serializable {
         public void setSortExprValues(List<String> sortExprValues) {
             this.sortExprValues = sortExprValues;
         }
+
+        @Override
+        public String toString() {
+            return "Item{" +
+                "fields=" + fields +
+                ", property=" + property +
+                ", attribute=" + attribute +
+                ", variableValue=" + variableValue +
+                ", sortExprValues=" + sortExprValues +
+                '}';
+        }
+    }
+
+    @Override
+    public String toString() {
+        return "QueryResult{" +
+            "searchtime=" + searchtime +
+            ", total=" + total +
+            ", num=" + num +
+            ", viewtotal=" + viewtotal +
+            ", items=" + items +
+            ", facet=" + facet +
+            '}';
     }
 }

@@ -72,4 +72,16 @@ public abstract class OpenSearchBaseResult<T> implements Serializable {
     public void setOpsRequestMisc(String opsRequestMisc) {
         this.opsRequestMisc = opsRequestMisc;
     }
+
+    @Override
+    public String toString() {
+        return "OpenSearchBaseResult{" +
+            "status='" + status + '\'' +
+            ", requestId='" + requestId + '\'' +
+            ", result=" + result +
+            ", errors=" + errors +
+            ", tracer='" + tracer + '\'' +
+            ", opsRequestMisc='" + opsRequestMisc + '\'' +
+            '}';
+    }
 }

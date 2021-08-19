@@ -64,6 +64,17 @@ public class Group implements Serializable {
         public void setValue(Object value) {
             this.value = value;
         }
+
+        @Override
+        public String toString() {
+            return "Item{" +
+                "min=" + min +
+                ", max=" + max +
+                ", count=" + count +
+                ", sum=" + sum +
+                ", value=" + value +
+                '}';
+        }
     }
 
     public String getKey() {
@@ -80,5 +91,13 @@ public class Group implements Serializable {
 
     public void setItems(List<Item> items) {
         this.items = items;
+    }
+
+    @Override
+    public String toString() {
+        return "Group{" +
+            "key='" + key + '\'' +
+            ", items=" + items +
+            '}';
     }
 }
