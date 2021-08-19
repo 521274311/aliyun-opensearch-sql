@@ -103,14 +103,14 @@ public class Test {
         String ACCESS_KEY = "xxx", SECRET = "xxx", APP_NAME = "app_name";
         String SQL = "select * from " + APP_NAME + " where name like '%咸鱼%' limit 10";
         OpenSearchSqlClient client = new DefaultOpenSearchSqlClient(ACCESS_KEY, SECRET, Endpoint.SHENZHEN, APP_NAME);
-        OpenSearchQueryIterator<SearchResult> it1 = client.query(SQL);
+        OpenSearchQueryIterator it1 = client.query(SQL);
         // v0.1.0-SNAPSHOT版本后hasNext方法不对结果做校验, 转而使用OpenSearchQueryIterator.hasSuccessfulNext()方法对结果状态与数据进行校验
         while (it1.hasNext()) {
             System.out.println(it1.next());
         }
     
         // 使用hasSuccessfulNext
-        OpenSearchQueryIterator<SearchResult> it2 = client.query(SQL);
+      OpenSearchQueryIterator it2 = client.query(SQL);
         while (it2.hasSuccessfulNext()) {
           // 获取指定结构Bean, 需继承QueryObject
           class A extends club.kingon.sql.opensearch.entry.QueryObject {
