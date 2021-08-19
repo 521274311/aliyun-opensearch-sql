@@ -16,6 +16,10 @@ public class Table implements Serializable {
 
     private Map<String, Field> fields;
 
+    private Boolean primaryTable;
+
+    private String tableName;
+
     public String getName() {
         return name;
     }
@@ -30,6 +34,22 @@ public class Table implements Serializable {
 
     public void setFields(Map<String, Field> fields) {
         this.fields = fields;
+    }
+
+    public Boolean getPrimaryTable() {
+        return primaryTable;
+    }
+
+    public void setPrimaryTable(Boolean primaryTable) {
+        this.primaryTable = primaryTable;
+    }
+
+    public String getTableName() {
+        return tableName;
+    }
+
+    public void setTableName(String tableName) {
+        this.tableName = tableName;
     }
 
     @Override

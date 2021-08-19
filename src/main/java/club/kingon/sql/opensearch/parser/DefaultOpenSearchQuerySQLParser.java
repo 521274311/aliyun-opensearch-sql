@@ -4,7 +4,7 @@ import club.kingon.sql.opensearch.OpenSearchManager;
 import club.kingon.sql.opensearch.SearchQueryModeEnum;
 import club.kingon.sql.opensearch.Tuple2;
 import club.kingon.sql.opensearch.util.Constants;
-import club.kingon.sql.opensearch.util.OpenSearchConverter;
+import club.kingon.sql.opensearch.parser.util.OpenSearchConverter;
 import com.alibaba.druid.sql.ast.statement.SQLSelectStatement;
 import com.alibaba.druid.sql.dialect.mysql.ast.statement.MySqlSelectQueryBlock;
 import com.aliyun.opensearch.sdk.generated.search.DeepPaging;

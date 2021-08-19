@@ -36,6 +36,20 @@ public interface OpenSearchManager extends OpenSearchResourceManager {
 
     List<Table> getTables(String version);
 
+    default Table getPrimaryTable() {
+        return getPrimaryTable(getMasterVersion());
+    }
+
+    default Table getPrimaryTable(String version) {
+        List<Table> tables = getTables(version);
+        for (Table table : tables) {
+            if (table.getPrimaryTable()) {
+                return table;
+            }
+        }
+        return null;
+    }
+
     default Table getTable(String tableName) {
         return getTable(getMasterVersion(), tableName);
     }

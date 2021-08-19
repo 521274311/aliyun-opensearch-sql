@@ -19,6 +19,12 @@ public class DefaultOpenSearchSQLParser implements OpenSearchSQLParser {
         OpenSearchSQLType type = parseType(sql);
         if (type == OpenSearchSQLType.QUERY) {
             return (new DefaultOpenSearchQuerySQLParser(sql, manager)).parse(sql);
+        } else if (type == OpenSearchSQLType.INSERT) {
+            return (new DefaultOpenSearchInsertSQLParser(sql, manager)).parse(sql);
+        } else if (type == OpenSearchSQLType.UPDATE) {
+            return (new DefaultOpenSearchUpdateSQLParser(sql, manager)).parse(sql);
+        } else if (type == OpenSearchSQLType.DELETE) {
+            return (new DefaultOpenSearchDeleteSQLParser(sql, manager)).parse(sql);
         }
         throw new SqlParserException("unsupported parser type.");
     }

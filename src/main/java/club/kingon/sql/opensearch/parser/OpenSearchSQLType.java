@@ -7,6 +7,7 @@ package club.kingon.sql.opensearch.parser;
 public enum OpenSearchSQLType {
     INSERT("insert"),
     UPDATE("update"),
+    REPLACE("replace"),
     QUERY("select"),
     DELETE("delete");
 
