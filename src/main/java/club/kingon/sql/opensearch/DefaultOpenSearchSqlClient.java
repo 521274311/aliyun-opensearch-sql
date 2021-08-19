@@ -2,14 +2,20 @@ package club.kingon.sql.opensearch;
 
 import club.kingon.sql.opensearch.api.Endpoint;
 import club.kingon.sql.opensearch.parser.DefaultOpenSearchSQLParser;
-import club.kingon.sql.opensearch.parser.OpenSearchQueryEntry;
+import club.kingon.sql.opensearch.parser.entry.OpenSearchDataOperationEntry;
+import club.kingon.sql.opensearch.parser.entry.OpenSearchQueryEntry;
 import club.kingon.sql.opensearch.parser.OpenSearchSQLParser;
 import club.kingon.sql.opensearch.support.DefaultOpenSearchAppManager;
+import com.aliyun.opensearch.DocumentClient;
 import com.aliyun.opensearch.SearcherClient;
+import com.aliyun.opensearch.sdk.generated.commons.OpenSearchClientException;
+import com.aliyun.opensearch.sdk.generated.commons.OpenSearchException;
+import com.aliyun.opensearch.sdk.generated.commons.OpenSearchResult;
 import com.aliyun.opensearch.sdk.generated.search.Distinct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -23,6 +29,8 @@ public class DefaultOpenSearchSqlClient implements OpenSearchSqlClient {
     private OpenSearchManager openSearchManager;
 
     private SearcherClient searcherClient;
+
+    private DocumentClient documentClient;
 
     private OpenSearchSQLParser sqlParser;
 
@@ -49,7 +57,8 @@ public class DefaultOpenSearchSqlClient implements OpenSearchSqlClient {
     public DefaultOpenSearchSqlClient(String accessKey, String secret, Endpoint endpoint, boolean intranet, String appName, long startWaitMills) {
         openSearchManager = new DefaultOpenSearchAppManager(accessKey, secret,endpoint, intranet, appName, startWaitMills);
         searcherClient = new SearcherClient(openSearchManager.getOpenSearchClient());
-        sqlParser = new DefaultOpenSearchSQLParser(openSearchManager);
+        documentClient = new DocumentClient(openSearchManager.getOpenSearchClient());
+        sqlParser = new DefaultOpenSearchSQLParser(openSearchManager, this);
     }
 
     @Override
@@ -62,6 +71,44 @@ public class DefaultOpenSearchSqlClient implements OpenSearchSqlClient {
         return new DefaultOpenSearchQueryIterator(searcherClient, config);
     }
 
+    @Override
+    public OpenSearchResult insert(String sql) {
+        OpenSearchDataOperationEntry entry = sqlParser.parse(sql);
+        for (Map<String, Object> data : entry.getData()) {
+            documentClient.add(data);
+        }
+        try {
+            return documentClient.commit(entry.getAppName(), entry.getTableName());
+        } catch (OpenSearchException | OpenSearchClientException e) {
+            throw new OpenSearchDqlException("exception occurred when inserting data. insert sql:" + sql, e);
+        }
+    }
+
+    @Override
+    public OpenSearchResult update(String sql) {
+        OpenSearchDataOperationEntry entry = sqlParser.parse(sql);
+        for (Map<String, Object> data : entry.getData()) {
+            documentClient.update(data);
+        }
+        try {
+            return documentClient.commit(entry.getAppName(), entry.getTableName());
+        } catch (OpenSearchException | OpenSearchClientException e) {
+            throw new OpenSearchDqlException("exception occurred when inserting data. insert sql:" + sql, e);
+        }
+    }
+
+    @Override
+    public OpenSearchResult delete(String sql) {
+        OpenSearchDataOperationEntry entry = sqlParser.parse(sql);
+        for (Map<String, Object> data : entry.getData()) {
+            documentClient.remove(data);
+        }
+        try {
+            return documentClient.commit(entry.getAppName(), entry.getTableName());
+        } catch (OpenSearchException | OpenSearchClientException e) {
+            throw new OpenSearchDqlException("exception occurred when inserting data. insert sql:" + sql, e);
+        }
+    }
 
 
     @Override

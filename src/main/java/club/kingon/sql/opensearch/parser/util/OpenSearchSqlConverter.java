@@ -38,9 +38,9 @@ import java.util.*;
  * @author dragons
  * @date 2020/12/18 16:13
  */
-public class OpenSearchConverter {
+public class OpenSearchSqlConverter {
 
-    private final static Logger log = LoggerFactory.getLogger(OpenSearchConverter.class);
+    private final static Logger log = LoggerFactory.getLogger(OpenSearchSqlConverter.class);
 
     public static List<String> explainFrom(MySqlSchemaStatVisitor visitor) {
         return explainFrom(visitor, null);

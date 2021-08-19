@@ -1,4 +1,4 @@
-package club.kingon.sql.opensearch.parser;
+package club.kingon.sql.opensearch.parser.entry;
 
 import club.kingon.sql.opensearch.SearchQueryModeEnum;
 import club.kingon.sql.opensearch.util.Constants;

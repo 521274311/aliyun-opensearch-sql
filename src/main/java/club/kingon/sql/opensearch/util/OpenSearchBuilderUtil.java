@@ -1,7 +1,7 @@
 package club.kingon.sql.opensearch.util;
 
 import club.kingon.sql.opensearch.SearchQueryModeEnum;
-import club.kingon.sql.opensearch.parser.OpenSearchQueryEntry;
+import club.kingon.sql.opensearch.parser.entry.OpenSearchQueryEntry;
 import com.aliyun.opensearch.sdk.generated.search.*;
 
 import java.util.List;

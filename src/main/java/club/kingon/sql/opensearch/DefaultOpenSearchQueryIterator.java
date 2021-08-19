@@ -2,7 +2,7 @@ package club.kingon.sql.opensearch;
 
 import club.kingon.sql.opensearch.entry.OpenSearchQueryResult;
 import club.kingon.sql.opensearch.entry.QueryObject;
-import club.kingon.sql.opensearch.parser.OpenSearchQueryEntry;
+import club.kingon.sql.opensearch.parser.entry.OpenSearchQueryEntry;
 import club.kingon.sql.opensearch.util.OpenSearchBuilderUtil;
 import club.kingon.sql.opensearch.util.ResponseConstants;
 import com.alibaba.fastjson.JSON;

@@ -1,4 +1,4 @@
-package club.kingon.sql.opensearch.parser;
+package club.kingon.sql.opensearch.parser.entry;
 
 /**
  * @author dragons
