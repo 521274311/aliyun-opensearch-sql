@@ -17,7 +17,7 @@ public class DefaultOpenSearchAppManager extends AbstractOpenSearchAppSchemaMana
     }
 
     public DefaultOpenSearchAppManager(String accessKey, String secret, Endpoint endpoint, boolean intranet, String appName) {
-        this(accessKey, secret, endpoint, intranet, appName, 2000L);
+        this(accessKey, secret, endpoint, intranet, appName, 500L);
 
     }
 

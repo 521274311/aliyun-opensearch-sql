@@ -1,5 +1,6 @@
 package club.kingon.sql.opensearch.support;
 
+import club.kingon.sql.opensearch.Tuple2;
 import club.kingon.sql.opensearch.api.Endpoint;
 import club.kingon.sql.opensearch.api.OpenSearchAppNameVersionDetailQueryApiRequest;
 import club.kingon.sql.opensearch.api.entry.*;
@@ -43,81 +44,50 @@ public abstract class AbstractOpenSearchAppSchemaManager extends AbstractOpenSea
 
     public AbstractOpenSearchAppSchemaManager(String accessKey, String secret, Endpoint endpoint, boolean intranet, String appName) {
         super(accessKey, secret, endpoint, intranet, appName);
-        asyncRefreshInfo();
-    }
-
-
-    private void asyncRefreshInfo() {
-        asyncRefreshInfoThread = new Thread(() -> {
-            while (true) {
-                if (!enableSchema) {
-                    try {
-                        Thread.sleep(checkEnableMills);
-                        continue;
-                    } catch (InterruptedException e) {
-                        log.info("async refresh appname version info stop. message: {}", e.getMessage());
-                        break;
-                    }
-                }
-                try {
-                    synchronized (appNameSign) {
-                        appNameSign.wait(refreshMills + API_INVOKE_INTERVAL);
-                    }
-                } catch (InterruptedException e) {
-                    log.info("async refresh appname version info stop. message: {}", e.getMessage());
-                    break;
-                }
-                // 需要存储应用版本信息
-                AppName appName = getAppName();
-                if (appName != null) {
-                    Map<String, Schema> newVersionSchemaMap = new HashMap<>();
-                    if (versionSchemaMap != null) {
-                        newVersionSchemaMap.putAll(versionSchemaMap);
-                    }
-                    Map<String, Indexes> newIndexesMap = new HashMap<>();
-                    appName.getVersions().forEach(version -> {
-                        try {
-                            CommonResponse response = aliyunApiClient.execute(new OpenSearchAppNameVersionDetailQueryApiRequest(appName.getName(), version));
-                            // 存储
-                            OpenSearchAppNameVersionDetailQueryApiData data = JSON.parseObject(response.getData(), OpenSearchAppNameVersionDetailQueryApiData.class);
-                            Schema schema;
-                            if (versionSchemaMap == null || (schema = versionSchemaMap.get(version)) == null || schema.hashCode() != data.getResult().getSchema().hashCode()) {
-                                newVersionSchemaMap.put(version, data.getResult().getSchema());
-                            }
-                            // 构建索引
-                            Indexes indexes = new Indexes();
-                            data.getResult().getSchema().getTables().forEach((k, v) -> {
-                                indexes.fieldIndex.putAll(v.getFields());
-                            });
-                            data.getResult().getSchema().getIndexes().getSearchFields().forEach((k, v) -> {
-                                v.getFields().forEach(e -> {
-                                    List<String> indexNames = indexes.fieldNameIndexIndex.getOrDefault(e, new ArrayList<>());
-                                    indexNames.add(k);
-                                    indexes.fieldNameIndexIndex.put(e, indexNames);
-                                });
-                            });
-                            newIndexesMap.put(version, indexes);
-                        } catch (ClientException e) {
-                            log.error("async invoke opensearch app name struct api fail.", e);
-                        }
-                    });
-                    versionSchemaMap = newVersionSchemaMap;
-                    indexesMap = newIndexesMap;
-                    synchronized (appSchemaSign) {
-                        appSchemaSign.notifyAll();
-                    }
-                }
-            }
-        }, TIMER_THREAD_NAME_PREFIX);
-        asyncRefreshInfoThread.start();
     }
 
     @Override
-    public void close() {
-        super.close();
-        if (asyncRefreshInfoThread != null && asyncRefreshInfoThread.isAlive()) {
-            asyncRefreshInfoThread.interrupt();
-        }
+    protected void startAsyncTask() {
+        addRefreshTaskFirst(Tuple2.of((t) -> enableSchema, (t) -> {
+            // 需要存储应用版本信息
+            AppName appNameObj = getAppName();
+            if (appNameObj != null) {
+                Map<String, Schema> newVersionSchemaMap = new HashMap<>();
+                if (versionSchemaMap != null) {
+                    newVersionSchemaMap.putAll(versionSchemaMap);
+                }
+                Map<String, Indexes> newIndexesMap = new HashMap<>();
+                appNameObj.getVersions().forEach(version -> {
+                    try {
+                        CommonResponse response = aliyunApiClient.execute(new OpenSearchAppNameVersionDetailQueryApiRequest(appNameObj.getName(), version));
+                        // 存储
+                        OpenSearchAppNameVersionDetailQueryApiData data = JSON.parseObject(response.getData(), OpenSearchAppNameVersionDetailQueryApiData.class);
+                        Schema schema;
+                        if (versionSchemaMap == null || (schema = versionSchemaMap.get(version)) == null || schema.hashCode() != data.getResult().getSchema().hashCode()) {
+                            newVersionSchemaMap.put(version, data.getResult().getSchema());
+                        }
+                        // 构建索引
+                        Indexes indexes = new Indexes();
+                        data.getResult().getSchema().getTables().forEach((k, v) -> {
+                            indexes.fieldIndex.putAll(v.getFields());
+                        });
+                        data.getResult().getSchema().getIndexes().getSearchFields().forEach((k, v) -> {
+                            v.getFields().forEach(e -> {
+                                List<String> indexNames = indexes.fieldNameIndexIndex.getOrDefault(e, new ArrayList<>());
+                                indexNames.add(k);
+                                indexes.fieldNameIndexIndex.put(e, indexNames);
+                            });
+                        });
+                        newIndexesMap.put(version, indexes);
+                    } catch (ClientException e) {
+                        log.error("async invoke opensearch app name struct api fail.", e);
+                    }
+                });
+                versionSchemaMap = newVersionSchemaMap;
+                indexesMap = newIndexesMap;
+            }
+        }), Tuple2.of(null, null));
+        super.startAsyncTask();
     }
 
     @Override

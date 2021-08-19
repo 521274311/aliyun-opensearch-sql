@@ -1,7 +1,10 @@
 package club.kingon.sql.opensearch.support;
 
-import club.kingon.sql.opensearch.api.*;
-import club.kingon.sql.opensearch.api.entry.*;
+import club.kingon.sql.opensearch.Tuple2;
+import club.kingon.sql.opensearch.api.Endpoint;
+import club.kingon.sql.opensearch.api.OpenSearchAppNameDetailQueryApiRequest;
+import club.kingon.sql.opensearch.api.entry.AppName;
+import club.kingon.sql.opensearch.api.entry.OpenSearchAppNameDetailQueryApiData;
 import com.alibaba.fastjson.JSON;
 import com.aliyuncs.CommonResponse;
 import com.aliyuncs.exceptions.ClientException;
@@ -15,25 +18,17 @@ import java.util.List;
  * @author dragons
  * @date 2021/8/12 11:29
  */
-public abstract class AbstractOpenSearchAppNameManager extends AbstractOpenSearchClientManager {
+public abstract class AbstractOpenSearchAppNameManager extends AbstractOpenSearchRefreshRelyManager {
 
     private final static Logger log = LoggerFactory.getLogger(AbstractOpenSearchAppNameManager.class);
-
-    private final static String TIMER_THREAD_NAME_PREFIX = "opsh-apn-thread-";
 
     private volatile AppName appNameStorage;
 
     private volatile String appName;
 
-    protected volatile long checkEnableMills = 5 * 60 * 100L;
-
-    protected volatile long refreshMills = 60 * 60 * 1000L;
-
     protected final Object appNameSign = new Object();
 
     private boolean enableAppName = true;
-
-    private Thread asyncRefreshInfoThread;
 
     public AbstractOpenSearchAppNameManager(String accessKey, String secret, Endpoint endpoint, String appName) {
         this(accessKey, secret, endpoint, false, appName);
@@ -42,45 +37,25 @@ public abstract class AbstractOpenSearchAppNameManager extends AbstractOpenSearc
     public AbstractOpenSearchAppNameManager(String accessKey, String secret, Endpoint endpoint, boolean intranet, String appName) {
         super(accessKey, secret, endpoint, intranet);
         this.appName = appName;
-        asyncRefreshInfo();
     }
 
-
-    private void asyncRefreshInfo() {
-        asyncRefreshInfoThread = new Thread(() -> {
-            while (true) {
-                if (!enableAppName) {
-                    try {
-                        Thread.sleep(checkEnableMills);
-                        continue;
-                    } catch (InterruptedException e) {
-                        log.info("async refresh appname info stop. message: {}", e.getMessage());
-                        break;
-                    }
-                }
+    @Override
+    protected void startAsyncTask() {
+        addRefreshTaskFirst(Tuple2.of((t) -> enableAppName, (t) -> {
+            if (appName != null) {
+                CommonResponse resp = null;
                 try {
-                    if (appName != null) {
-                        CommonResponse resp = aliyunApiClient.execute(new OpenSearchAppNameDetailQueryApiRequest(appName));
-                        OpenSearchAppNameDetailQueryApiData appNameData = JSON.parseObject(resp.getData(), OpenSearchAppNameDetailQueryApiData.class);
-                        if (appNameStorage == null || appNameStorage.hashCode() != appNameData.getResult().hashCode()) {
-                            appNameStorage = appNameData.getResult();
-                        }
-                        synchronized (appNameSign) {
-                            appNameSign.notifyAll();
-                        }
+                    resp = aliyunApiClient.execute(new OpenSearchAppNameDetailQueryApiRequest(appName));
+                    OpenSearchAppNameDetailQueryApiData appNameData = JSON.parseObject(resp.getData(), OpenSearchAppNameDetailQueryApiData.class);
+                    if (appNameStorage == null || appNameStorage.hashCode() != appNameData.getResult().hashCode()) {
+                        appNameStorage = appNameData.getResult();
                     }
                 } catch (ClientException e) {
                     log.error("async invoke opensearch app name struct api fail.", e);
                 }
-                try {
-                    Thread.sleep(refreshMills);
-                } catch (InterruptedException e) {
-                    log.info("async refresh appname info stop. message: {}", e.getMessage());
-                    break;
-                }
             }
-        }, TIMER_THREAD_NAME_PREFIX);
-        asyncRefreshInfoThread.start();
+        }), Tuple2.of(null, null));
+        super.startAsyncTask();
     }
 
     public void setAppName(String appName) {
@@ -100,12 +75,5 @@ public abstract class AbstractOpenSearchAppNameManager extends AbstractOpenSearc
     @Override
     public List<String> getVersions() {
         return appNameStorage == null ? Collections.emptyList() : appNameStorage.getVersions();
-    }
-
-    @Override
-    public void close() {
-        if (asyncRefreshInfoThread != null && asyncRefreshInfoThread.isAlive()) {
-            asyncRefreshInfoThread.interrupt();
-        }
     }
 }
