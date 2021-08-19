@@ -1,13 +1,15 @@
 package club.kingon.sql.opensearch;
 
+import club.kingon.sql.opensearch.entry.OpenSearchQueryResult;
+import club.kingon.sql.opensearch.entry.QueryObject;
 import club.kingon.sql.opensearch.parser.OpenSearchQueryEntry;
-import club.kingon.sql.opensearch.util.Constants;
 import club.kingon.sql.opensearch.util.OpenSearchBuilderUtil;
 import club.kingon.sql.opensearch.util.ResponseConstants;
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONArray;
+import com.alibaba.fastjson.JSONObject;
+import com.alibaba.fastjson.TypeReference;
 import com.aliyun.opensearch.SearcherClient;
-import com.aliyun.opensearch.sdk.dependencies.org.json.JSONArray;
-import com.aliyun.opensearch.sdk.dependencies.org.json.JSONException;
-import com.aliyun.opensearch.sdk.dependencies.org.json.JSONObject;
 import com.aliyun.opensearch.sdk.generated.commons.OpenSearchClientException;
 import com.aliyun.opensearch.sdk.generated.commons.OpenSearchException;
 import com.aliyun.opensearch.sdk.generated.search.*;
@@ -40,19 +42,72 @@ public class DefaultOpenSearchQueryIterator extends AbstractOpenSearchQueryItera
 
     private SearchResult result;
 
-    private boolean alreadyExplain = false;
-    private JSONArray items = null;
-
     public DefaultOpenSearchQueryIterator(SearcherClient client, OpenSearchQueryEntry data) {
         this.searcherClient = client;
         this.data = data;
     }
-    /**
-     *
-     * @throws JSONException
-     */
+
     @Override
     public boolean hasNext() {
+        if (result != null) {
+            return true;
+        }
+        if (data.getCount() == 0) {
+            return false;
+        }
+        int num = Math.min(data.getCount(), data.getBatch());
+        try {
+            SearchParams searchParams = OpenSearchBuilderUtil.builder(data);
+            if (log.isDebugEnabled()) {
+                log.debug("SearchParams: {}", searchParams);
+            }
+            SearchResult searchResult = searcherClient.execute(searchParams);
+            if (log.isDebugEnabled()) {
+                log.debug("SearchResult: {}", searchResult);
+            }
+            if (searchResult == null || searchResult.getResult() == null) {
+                if (log.isErrorEnabled()) {
+                    log.error("search result is null" );
+                }
+                return false;
+            }
+            JSONObject resultJson = JSON.parseObject(searchResult.getResult());
+            if (data.getQueryMode() == SearchQueryModeEnum.SCROLL) {
+                String scrollId = resultJson.getJSONObject(ResponseConstants.RESULT).getString(ResponseConstants.SCROLLID);
+                if (data.getDeepPaging().getScrollId() == null) {
+                    data.getDeepPaging().setScrollId(scrollId);
+                    searchResult = searcherClient.execute(searchParams);
+                    resultJson = JSON.parseObject(searchResult.getResult());
+                    String status = resultJson.getString(ResponseConstants.STATUS);
+                    if (ResponseConstants.STATUS_OK.equals(status)) {
+                        scrollId = resultJson.getJSONObject(ResponseConstants.RESULT).getString(ResponseConstants.SCROLLID);
+                    } else {
+                        data.getDeepPaging().setScrollId(null);
+                        if (log.isErrorEnabled()) {
+                            log.error("scroll mode request fail, info: {}", searchResult.getResult());
+                        }
+                    }
+                }
+                data.getDeepPaging().setScrollId(scrollId);
+            } else if (data.getQueryMode() == SearchQueryModeEnum.HIT) {
+                data.setOffset(data.getOffset() + num);
+            }
+            data.setCount(data.getCount() - num);
+            result = searchResult;
+            return true;
+        } catch (OpenSearchException | OpenSearchClientException e) {
+            if (log.isErrorEnabled()) {
+                log.error("OpenSearch exception", e);
+            }
+            if (retry < 0) {
+                throw new OpenSearchDqlException(e);
+            }
+        }
+        return false;
+    }
+
+    @Override
+    public boolean hasSuccessfulNext() {
         int retry = this.retry;
         if (result != null) {
             return true;
@@ -77,14 +132,14 @@ public class DefaultOpenSearchQueryIterator extends AbstractOpenSearchQueryItera
                     }
                     return false;
                 }
-                JSONObject resultJson = new JSONObject(searchResult.getResult());
+                JSONObject resultJson = JSON.parseObject(searchResult.getResult());
                 String status = resultJson.getString(ResponseConstants.STATUS);
                 if (data.getQueryMode() == SearchQueryModeEnum.SCROLL) {
                     String scrollId = resultJson.getJSONObject(ResponseConstants.RESULT).getString(ResponseConstants.SCROLLID);
                     if (data.getDeepPaging().getScrollId() == null) {
                         data.getDeepPaging().setScrollId(scrollId);
                         searchResult = searcherClient.execute(searchParams);
-                        resultJson = new JSONObject(searchResult.getResult());
+                        resultJson = JSON.parseObject(searchResult.getResult());
                         status = resultJson.getString(ResponseConstants.STATUS);
                         if (ResponseConstants.STATUS_OK.equals(status)) {
                             scrollId = resultJson.getJSONObject(ResponseConstants.RESULT).getString(ResponseConstants.SCROLLID);
@@ -98,20 +153,18 @@ public class DefaultOpenSearchQueryIterator extends AbstractOpenSearchQueryItera
                     data.getDeepPaging().setScrollId(scrollId);
                 }
                 if (ResponseConstants.STATUS_OK.equals(status)) {
-                    if (!resultJson.has(ResponseConstants.RESULT)) {
+                    if (!resultJson.containsKey(ResponseConstants.RESULT)) {
                         if (log.isDebugEnabled()) {
                             log.debug("status is ok, but hasnot result param. info: {}", searchResult.getResult());
                         }
                     }
                     JSONArray items = resultJson.getJSONObject(ResponseConstants.RESULT).getJSONArray(ResponseConstants.RESULT_ITEMS);
-                    if (items.length() > 0) {
+                    if (items.size() > 0) {
                         result = searchResult;
                         if (data.getQueryMode() == SearchQueryModeEnum.HIT) {
                             data.setOffset(data.getOffset() + num);
                         }
                         data.setCount(data.getCount() - num);
-                        // 重置状态
-                        reset();
                         return true;
                     }
                     if (log.isDebugEnabled()) {
@@ -138,11 +191,6 @@ public class DefaultOpenSearchQueryIterator extends AbstractOpenSearchQueryItera
         return false;
     }
 
-    @Override
-    public boolean hasNextOne() {
-        return items != null && items.length() > 0 || hasNext();
-    }
-
     /**
      * Nullable
      * @throws NullPointerException
@@ -155,40 +203,11 @@ public class DefaultOpenSearchQueryIterator extends AbstractOpenSearchQueryItera
         return res;
     }
 
-    /**
-     * Nullable
-     * @throws NullPointerException
-     * @throws JSONException
-     */
-    @Override
-    public JSONObject nextOne() {
-        waitPagingInterval();
-        // 尚未解析
-        if ((items == null || items.length() == 0) && !alreadyExplain) {
-            items = (new JSONObject(result.getResult())).getJSONObject(ResponseConstants.RESULT).getJSONArray(ResponseConstants.RESULT_ITEMS);
-            alreadyExplain = true;
-        }
-        if (items == null || items.length() == 0) {
-            return null;
-        }
-        JSONObject item = items.getJSONObject(0).getJSONObject(Constants.FIELDS);
-        items.remove(0);
-        result = null;
-        return item;
-    }
-
     private void waitPagingInterval() {
         try {
             Thread.sleep(pagingInterval);
         } catch (InterruptedException e) {
         }
-    }
-
-
-
-    private void reset() {
-        alreadyExplain = false;
-        items = null;
     }
 
     public int getRetry() {
@@ -218,5 +237,16 @@ public class DefaultOpenSearchQueryIterator extends AbstractOpenSearchQueryItera
     @Override
     public String express() {
         return data == null ? "" : OpenSearchBuilderUtil.builder(data).toString();
+    }
+
+    /**
+     *
+     */
+    @Override
+    public <T extends QueryObject> OpenSearchQueryResult<T> next(TypeReference<OpenSearchQueryResult<T>> clazz) {
+        if (this.result == null) return null;
+        OpenSearchQueryResult<T> res = JSON.parseObject(this.result.getResult(), clazz);
+        result = null;
+        return res;
     }
 }

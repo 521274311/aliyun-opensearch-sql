@@ -3,9 +3,9 @@ package club.kingon.sql.opensearch.support;
 import club.kingon.sql.opensearch.api.Endpoint;
 import club.kingon.sql.opensearch.api.OpenSearchAppNameVersionDetailQueryApiRequest;
 import club.kingon.sql.opensearch.api.entry.*;
+import com.alibaba.fastjson.JSON;
 import com.aliyuncs.CommonResponse;
 import com.aliyuncs.exceptions.ClientException;
-import com.google.gson.Gson;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -45,7 +45,6 @@ public abstract class AbstractOpenSearchSchemaManager extends AbstractOpenSearch
 
     private void asyncRefreshInfo() {
         asyncRefreshInfoThread = new Thread(() -> {
-            final Gson gson = new Gson();
             while (true) {
                 try {
                     synchronized (appNameSign) {
@@ -68,7 +67,7 @@ public abstract class AbstractOpenSearchSchemaManager extends AbstractOpenSearch
                         try {
                             CommonResponse response = aliyunApiClient.execute(new OpenSearchAppNameVersionDetailQueryApiRequest(appName.getName(), version));
                             // 存储
-                            OpenSearchAppNameVersionDetailQueryApiData data = gson.fromJson(response.getData(), OpenSearchAppNameVersionDetailQueryApiData.class);
+                            OpenSearchAppNameVersionDetailQueryApiData data = JSON.parseObject(response.getData(), OpenSearchAppNameVersionDetailQueryApiData.class);
                             Schema schema;
                             if (versionSchemaMap == null || (schema = versionSchemaMap.get(version)) == null || schema.hashCode() != data.getResult().getSchema().hashCode()) {
                                 newVersionSchemaMap.put(version, data.getResult().getSchema());

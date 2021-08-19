@@ -1,7 +1,9 @@
 package club.kingon.sql.opensearch;
 
 
-import com.aliyun.opensearch.sdk.dependencies.org.json.JSONObject;
+import club.kingon.sql.opensearch.entry.OpenSearchQueryResult;
+import club.kingon.sql.opensearch.entry.QueryObject;
+import com.alibaba.fastjson.TypeReference;
 import com.aliyun.opensearch.sdk.generated.search.general.SearchResult;
 
 import java.util.Iterator;
@@ -12,7 +14,8 @@ import java.util.Iterator;
  * @date 2020-12-23 17:43
  */
 public interface OpenSearchQueryIterator extends Iterator<SearchResult>, Expression<String> {
-    boolean hasNextOne();
 
-    JSONObject nextOne();
+    boolean hasSuccessfulNext();
+
+    <T extends QueryObject> OpenSearchQueryResult<T> next(TypeReference<OpenSearchQueryResult<T>> clazz);
 }

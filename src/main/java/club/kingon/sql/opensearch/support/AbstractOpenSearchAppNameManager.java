@@ -2,9 +2,9 @@ package club.kingon.sql.opensearch.support;
 
 import club.kingon.sql.opensearch.api.*;
 import club.kingon.sql.opensearch.api.entry.*;
+import com.alibaba.fastjson.JSON;
 import com.aliyuncs.CommonResponse;
 import com.aliyuncs.exceptions.ClientException;
-import com.google.gson.Gson;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -44,12 +44,11 @@ public abstract class AbstractOpenSearchAppNameManager extends AbstractOpenSearc
 
     private void asyncRefreshInfo() {
         asyncRefreshInfoThread = new Thread(() -> {
-            final Gson gson = new Gson();
             while (true) {
                 try {
                     if (appName != null) {
                         CommonResponse resp = aliyunApiClient.execute(new OpenSearchAppNameDetailQueryApiRequest(appName));
-                        OpenSearchAppNameDetailQueryApiData appNameData = gson.fromJson(resp.getData(), OpenSearchAppNameDetailQueryApiData.class);
+                        OpenSearchAppNameDetailQueryApiData appNameData = JSON.parseObject(resp.getData(), OpenSearchAppNameDetailQueryApiData.class);
                         if (appNameStorage == null || appNameStorage.hashCode() != appNameData.getResult().hashCode()) {
                             appNameStorage = appNameData.getResult();
                         }
