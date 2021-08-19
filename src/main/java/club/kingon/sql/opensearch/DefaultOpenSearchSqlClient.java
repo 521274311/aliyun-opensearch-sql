@@ -4,7 +4,7 @@ import club.kingon.sql.opensearch.api.Endpoint;
 import club.kingon.sql.opensearch.parser.DefaultOpenSearchSQLParser;
 import club.kingon.sql.opensearch.parser.OpenSearchQueryEntry;
 import club.kingon.sql.opensearch.parser.OpenSearchSQLParser;
-import club.kingon.sql.opensearch.support.DefaultOpenSearchManager;
+import club.kingon.sql.opensearch.support.DefaultOpenSearchAppManager;
 import com.aliyun.opensearch.SearcherClient;
 import com.aliyun.opensearch.sdk.generated.search.Distinct;
 import org.slf4j.Logger;
@@ -47,7 +47,7 @@ public class DefaultOpenSearchSqlClient implements OpenSearchSqlClient {
     }
 
     public DefaultOpenSearchSqlClient(String accessKey, String secret, Endpoint endpoint, boolean intranet, String appName, long startWaitMills) {
-        openSearchManager = new DefaultOpenSearchManager(accessKey, secret,endpoint, intranet, appName, startWaitMills);
+        openSearchManager = new DefaultOpenSearchAppManager(accessKey, secret,endpoint, intranet, appName, startWaitMills);
         searcherClient = new SearcherClient(openSearchManager.getOpenSearchClient());
         sqlParser = new DefaultOpenSearchSQLParser(openSearchManager);
     }

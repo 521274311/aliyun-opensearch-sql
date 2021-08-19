@@ -21,13 +21,17 @@ public abstract class AbstractOpenSearchAppNameManager extends AbstractOpenSearc
 
     private final static String TIMER_THREAD_NAME_PREFIX = "opsh-apn-thread-";
 
-    protected volatile long refreshMills = 60L * 60L * 1000L;
-
     private volatile AppName appNameStorage;
 
     private volatile String appName;
 
+    protected volatile long checkEnableMills = 5 * 60 * 100L;
+
+    protected volatile long refreshMills = 60 * 60 * 1000L;
+
     protected final Object appNameSign = new Object();
+
+    private boolean enableAppName = true;
 
     private Thread asyncRefreshInfoThread;
 
@@ -45,6 +49,15 @@ public abstract class AbstractOpenSearchAppNameManager extends AbstractOpenSearc
     private void asyncRefreshInfo() {
         asyncRefreshInfoThread = new Thread(() -> {
             while (true) {
+                if (!enableAppName) {
+                    try {
+                        Thread.sleep(checkEnableMills);
+                        continue;
+                    } catch (InterruptedException e) {
+                        log.info("async refresh appname info stop. message: {}", e.getMessage());
+                        break;
+                    }
+                }
                 try {
                     if (appName != null) {
                         CommonResponse resp = aliyunApiClient.execute(new OpenSearchAppNameDetailQueryApiRequest(appName));
@@ -62,7 +75,7 @@ public abstract class AbstractOpenSearchAppNameManager extends AbstractOpenSearc
                 try {
                     Thread.sleep(refreshMills);
                 } catch (InterruptedException e) {
-                    log.info("async refresh appname version info stop. message: {}", e.getMessage());
+                    log.info("async refresh appname info stop. message: {}", e.getMessage());
                     break;
                 }
             }

@@ -234,4 +234,40 @@ public class AppName implements Serializable {
     public int hashCode() {
         return Objects.hash(id, instanceId, commodityCode, resourceGroupId, name, currentVersion, switchedTime, quota, chargingWay, type, versions, chargeType, expireOn, description, produced, hasPendingQuotaReviewTask, created, updated, beaconAppCreated, lockMode, status);
     }
+
+    public static class Quota implements Serializable {
+
+        private static final long serialVersionUID = -5809782578272943999L;
+
+        private Long docSize;
+
+        private Long computeResource;
+
+        private String spec;
+
+        public Long getDocSize() {
+            return docSize;
+        }
+
+        public void setDocSize(Long docSize) {
+            this.docSize = docSize;
+        }
+
+        public Long getComputeResource() {
+            return computeResource;
+        }
+
+        public void setComputeResource(Long computeResource) {
+            this.computeResource = computeResource;
+        }
+
+        public String getSpec() {
+            return spec;
+        }
+
+        public void setSpec(String spec) {
+            this.spec = spec;
+        }
+    }
+
 }

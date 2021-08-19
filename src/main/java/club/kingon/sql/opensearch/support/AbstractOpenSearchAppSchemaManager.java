@@ -19,9 +19,9 @@ import java.util.stream.Collectors;
  * @author dragons
  * @date 2021/8/12 13:56
  */
-public abstract class AbstractOpenSearchSchemaManager extends AbstractOpenSearchAppNameManager {
+public abstract class AbstractOpenSearchAppSchemaManager extends AbstractOpenSearchAppNameManager {
 
-    private final static Logger log = LoggerFactory.getLogger(AbstractOpenSearchSchemaManager.class);
+    private final static Logger log = LoggerFactory.getLogger(AbstractOpenSearchAppSchemaManager.class);
 
     private final static String TIMER_THREAD_NAME_PREFIX = "opsh-scme-thread-";
 
@@ -33,11 +33,15 @@ public abstract class AbstractOpenSearchSchemaManager extends AbstractOpenSearch
 
     private Thread asyncRefreshInfoThread;
 
-    public AbstractOpenSearchSchemaManager(String accessKey, String secret, Endpoint endpoint, String appName) {
+    protected boolean enableSchema = true;
+
+    protected final Object appSchemaSign = new Object();
+
+    public AbstractOpenSearchAppSchemaManager(String accessKey, String secret, Endpoint endpoint, String appName) {
         this(accessKey, secret, endpoint, false, appName);
     }
 
-    public AbstractOpenSearchSchemaManager(String accessKey, String secret, Endpoint endpoint, boolean intranet, String appName) {
+    public AbstractOpenSearchAppSchemaManager(String accessKey, String secret, Endpoint endpoint, boolean intranet, String appName) {
         super(accessKey, secret, endpoint, intranet, appName);
         asyncRefreshInfo();
     }
@@ -46,6 +50,15 @@ public abstract class AbstractOpenSearchSchemaManager extends AbstractOpenSearch
     private void asyncRefreshInfo() {
         asyncRefreshInfoThread = new Thread(() -> {
             while (true) {
+                if (!enableSchema) {
+                    try {
+                        Thread.sleep(checkEnableMills);
+                        continue;
+                    } catch (InterruptedException e) {
+                        log.info("async refresh appname version info stop. message: {}", e.getMessage());
+                        break;
+                    }
+                }
                 try {
                     synchronized (appNameSign) {
                         appNameSign.wait(refreshMills + API_INVOKE_INTERVAL);
@@ -54,7 +67,6 @@ public abstract class AbstractOpenSearchSchemaManager extends AbstractOpenSearch
                     log.info("async refresh appname version info stop. message: {}", e.getMessage());
                     break;
                 }
-
                 // 需要存储应用版本信息
                 AppName appName = getAppName();
                 if (appName != null) {
@@ -91,6 +103,9 @@ public abstract class AbstractOpenSearchSchemaManager extends AbstractOpenSearch
                     });
                     versionSchemaMap = newVersionSchemaMap;
                     indexesMap = newIndexesMap;
+                    synchronized (appSchemaSign) {
+                        appSchemaSign.notifyAll();
+                    }
                 }
             }
         }, TIMER_THREAD_NAME_PREFIX);
