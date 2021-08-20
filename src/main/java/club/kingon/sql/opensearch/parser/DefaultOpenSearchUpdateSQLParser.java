@@ -9,6 +9,8 @@ import club.kingon.sql.opensearch.api.entry.Table;
 import club.kingon.sql.opensearch.parser.entry.OpenSearchDataOperationEntry;
 import club.kingon.sql.opensearch.parser.entry.OpenSearchEntry;
 import club.kingon.sql.opensearch.parser.util.OpenSearchSqlConverter;
+import club.kingon.sql.opensearch.support.AbstractOpenSearchAppNameManager;
+import club.kingon.sql.opensearch.support.AbstractOpenSearchAppSchemaManager;
 import com.alibaba.druid.sql.ast.expr.SQLBinaryOpExpr;
 import com.alibaba.druid.sql.ast.expr.SQLIdentifierExpr;
 import com.alibaba.druid.sql.ast.expr.SQLInListExpr;
@@ -41,8 +43,16 @@ public class DefaultOpenSearchUpdateSQLParser extends AbstractOpenSearchSQLParse
     @Override
     public <T extends OpenSearchEntry> T parse(String sql) {
         MySqlUpdateStatement statement = (MySqlUpdateStatement) this.statement;
-        List<Tuple2<String, String>> appNameAndTables = getAppNameAndTables();
+        List<Tuple2<String, String>> appNameAndTables = OpenSearchSqlConverter.explainAppNameAndTable(visitor, manager);
         if (appNameAndTables.size() == 0) throw new SQLParserException("update table must be not empty.");
+
+        if (!(manager instanceof AbstractOpenSearchAppSchemaManager)) {
+            throw new SQLParserException("manage object must be a AbstractOpenSearchAppSchemaManager instance.");
+        }
+
+        if (((AbstractOpenSearchAppSchemaManager) manager).isEnableSchemaManagement()) {
+            throw new SQLParserException("update operation must enable enableManagement status.");
+        }
 
         Table table = manager.getTable(statement.getTableName().getSimpleName());
         if (table == null) throw new SQLParserException("not fond table: " + statement.getTableName().getSimpleName() + ".");
@@ -88,16 +98,5 @@ public class DefaultOpenSearchUpdateSQLParser extends AbstractOpenSearchSQLParse
             mp -> mp.put(((SQLIdentifierExpr)item.getColumn()).getName(), ((SQLValuableExpr) item.getValue()).getValue())
         ));
         return (T) entry;
-    }
-
-    private List<Tuple2<String, String>> getAppNameAndTables() {
-        List<String> from = OpenSearchSqlConverter.explainFrom(visitor);
-        return from.stream().limit(1).map(name -> {
-            String[] appNameAndTable = name.split(",");
-            if (appNameAndTable.length == 1) {
-                return Tuple2.of(manager.getAppName().getName(), appNameAndTable[0]);
-            }
-            return Tuple2.of(appNameAndTable[0], appNameAndTable[1]);
-        }).collect(Collectors.toList());
     }
 }

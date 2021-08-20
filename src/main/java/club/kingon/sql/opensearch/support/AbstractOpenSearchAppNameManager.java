@@ -18,7 +18,7 @@ import java.util.List;
  * @author dragons
  * @date 2021/8/12 11:29
  */
-public abstract class AbstractOpenSearchAppNameManager extends AbstractOpenSearchRefreshRelyManager {
+public abstract class AbstractOpenSearchAppNameManager extends AbstractOpenSearchRefreshTaskManager {
 
     private final static Logger log = LoggerFactory.getLogger(AbstractOpenSearchAppNameManager.class);
 
@@ -26,20 +26,25 @@ public abstract class AbstractOpenSearchAppNameManager extends AbstractOpenSearc
 
     private volatile String appName;
 
-    private boolean enableAppName = true;
+    private boolean enableAppNameManagement;
 
     public AbstractOpenSearchAppNameManager(String accessKey, String secret, Endpoint endpoint, String appName) {
         this(accessKey, secret, endpoint, false, appName);
     }
 
     public AbstractOpenSearchAppNameManager(String accessKey, String secret, Endpoint endpoint, boolean intranet, String appName) {
+        this(accessKey, secret, endpoint, false, appName, true);
+    }
+
+    public AbstractOpenSearchAppNameManager(String accessKey, String secret, Endpoint endpoint, boolean intranet, String appName, boolean enableAppNameManagement) {
         super(accessKey, secret, endpoint, intranet);
         this.appName = appName;
+        this.enableAppNameManagement = enableAppNameManagement;
     }
 
     @Override
-    protected void startAsyncTask() {
-        addRefreshTaskFirst(Tuple2.of((t) -> enableAppName, (t) -> {
+    protected void addTask() {
+        addRefreshTask(Tuple2.of((t) -> enableAppNameManagement, (t) -> {
             if (appName != null) {
                 CommonResponse resp = null;
                 try {
@@ -53,7 +58,6 @@ public abstract class AbstractOpenSearchAppNameManager extends AbstractOpenSearc
                 }
             }
         }), Tuple2.of(null, null));
-        super.startAsyncTask();
     }
 
     public void setAppName(String appName) {
@@ -63,6 +67,14 @@ public abstract class AbstractOpenSearchAppNameManager extends AbstractOpenSearc
     @Override
     public AppName getAppName() {
         return appNameStorage;
+    }
+
+    public void setEnableAppNameManagement(boolean enableAppNameManagement) {
+        this.enableAppNameManagement = enableAppNameManagement;
+    }
+
+    public boolean isEnableAppNameManagement() {
+        return enableAppNameManagement;
     }
 
     @Override

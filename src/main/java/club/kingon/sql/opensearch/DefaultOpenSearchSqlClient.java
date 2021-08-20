@@ -55,11 +55,16 @@ public class DefaultOpenSearchSqlClient implements OpenSearchSqlClient {
     }
 
     public DefaultOpenSearchSqlClient(String accessKey, String secret, Endpoint endpoint, boolean intranet, String appName, long startWaitMills) {
-        openSearchManager = new DefaultOpenSearchAppManager(accessKey, secret,endpoint, intranet, appName, startWaitMills);
+        this(accessKey, secret, endpoint, intranet, appName, startWaitMills, true);
+    }
+
+    public DefaultOpenSearchSqlClient(String accessKey, String secret, Endpoint endpoint, boolean intranet, String appName, long startWaitMills, boolean enableManagement) {
+        openSearchManager = new DefaultOpenSearchAppManager(accessKey, secret,endpoint, intranet, appName, startWaitMills, enableManagement);
         searcherClient = new SearcherClient(openSearchManager.getOpenSearchClient());
         documentClient = new DocumentClient(openSearchManager.getOpenSearchClient());
         sqlParser = new DefaultOpenSearchSQLParser(openSearchManager, this);
     }
+
 
     @Override
     public OpenSearchQueryIterator query(String sql, Set<Distinct> distincts) {

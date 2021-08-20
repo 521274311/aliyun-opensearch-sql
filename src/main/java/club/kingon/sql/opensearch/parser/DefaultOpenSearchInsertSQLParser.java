@@ -2,8 +2,8 @@ package club.kingon.sql.opensearch.parser;
 
 import club.kingon.sql.opensearch.OpenSearchManager;
 import club.kingon.sql.opensearch.Tuple2;
-import club.kingon.sql.opensearch.parser.entry.OpenSearchEntry;
 import club.kingon.sql.opensearch.parser.entry.OpenSearchDataOperationEntry;
+import club.kingon.sql.opensearch.parser.entry.OpenSearchEntry;
 import club.kingon.sql.opensearch.parser.util.OpenSearchSqlConverter;
 import com.alibaba.druid.sql.ast.expr.SQLIdentifierExpr;
 import com.alibaba.druid.sql.ast.expr.SQLValuableExpr;
@@ -32,7 +32,7 @@ public class DefaultOpenSearchInsertSQLParser extends AbstractOpenSearchSQLParse
     @Override
     public <T extends OpenSearchEntry> T parse(String sql) {
         MySqlInsertStatement statement = (MySqlInsertStatement) this.statement;
-        List<Tuple2<String, String>> appNameAndTables = getAppNameAndTables();
+        List<Tuple2<String, String>> appNameAndTables = OpenSearchSqlConverter.explainAppNameAndTable(visitor, manager);
         if (appNameAndTables.size() == 0) throw new SQLParserException("insert table must be not empty.");
 
         OpenSearchDataOperationEntry entry = new OpenSearchDataOperationEntry();
@@ -56,16 +56,5 @@ public class DefaultOpenSearchInsertSQLParser extends AbstractOpenSearchSQLParse
                 }
             });
         return (T) entry;
-    }
-
-    private List<Tuple2<String, String>> getAppNameAndTables() {
-        List<String> from = OpenSearchSqlConverter.explainFrom(visitor);
-        return from.stream().limit(1).map(name -> {
-            String[] appNameAndTable = name.split(",");
-            if (appNameAndTable.length == 1) {
-                return Tuple2.of(manager.getAppName().getName(), appNameAndTable[0]);
-            }
-            return Tuple2.of(appNameAndTable[0], appNameAndTable[1]);
-        }).collect(Collectors.toList());
     }
 }

@@ -9,6 +9,7 @@ import club.kingon.sql.opensearch.api.entry.Table;
 import club.kingon.sql.opensearch.parser.entry.OpenSearchDataOperationEntry;
 import club.kingon.sql.opensearch.parser.entry.OpenSearchEntry;
 import club.kingon.sql.opensearch.parser.util.OpenSearchSqlConverter;
+import club.kingon.sql.opensearch.support.AbstractOpenSearchAppSchemaManager;
 import com.alibaba.druid.sql.ast.expr.SQLBinaryOpExpr;
 import com.alibaba.druid.sql.ast.expr.SQLIdentifierExpr;
 import com.alibaba.druid.sql.ast.expr.SQLInListExpr;
@@ -21,7 +22,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 /**
  * @author dragons
@@ -41,8 +41,16 @@ public class DefaultOpenSearchDeleteSQLParser extends AbstractOpenSearchSQLParse
     @Override
     public <T extends OpenSearchEntry> T parse(String sql) {
         MySqlDeleteStatement statement = (MySqlDeleteStatement) this.statement;
-        List<Tuple2<String, String>> appNameAndTables = getAppNameAndTables();
-        if (appNameAndTables.size() == 0) throw new SQLParserException("update table must be not empty.");
+        List<Tuple2<String, String>> appNameAndTables = OpenSearchSqlConverter.explainAppNameAndTable(visitor, manager);
+        if (appNameAndTables.size() == 0) throw new SQLParserException("delete table must be not empty.");
+
+        if (!(manager instanceof AbstractOpenSearchAppSchemaManager)) {
+            throw new SQLParserException("manage object must be a AbstractOpenSearchAppSchemaManager instance.");
+        }
+
+        if (((AbstractOpenSearchAppSchemaManager) manager).isEnableSchemaManagement()) {
+            throw new SQLParserException("delete operation must enable enableManagement status.");
+        }
 
         Table table = manager.getTable(statement.getTableName().getSimpleName());
         if (table == null) throw new SQLParserException("not fond table: " + statement.getTableName().getSimpleName() + ".");
@@ -57,7 +65,7 @@ public class DefaultOpenSearchDeleteSQLParser extends AbstractOpenSearchSQLParse
         List<Map<String, Object>> data = new ArrayList<>();
         entry.setData(data);
 
-        // 检查update条件是否为仅有主键，若仅有主键则直接对该主键数据update
+        // 检查delete条件是否为仅有主键，若仅有主键则直接对该主键数据delete
         if (statement.getWhere() instanceof SQLBinaryOpExpr
             && ((SQLBinaryOpExpr) statement.getWhere()).getLeft() instanceof SQLIdentifierExpr
             && primary.getName().equals(((SQLIdentifierExpr) ((SQLBinaryOpExpr) statement.getWhere()).getLeft()).getName())
@@ -79,21 +87,10 @@ public class DefaultOpenSearchDeleteSQLParser extends AbstractOpenSearchSQLParse
                 }
             });
         }
-        // 否则通过查询出所有符合条件结果进行update
+        // 否则通过查询出所有符合条件结果进行delete
         else {
-            throw new UnsupportedOperationException("unsupported update condition non primary column on current version");
+            throw new UnsupportedOperationException("unsupported delete condition non primary column on current version");
         }
         return (T) entry;
-    }
-
-    private List<Tuple2<String, String>> getAppNameAndTables() {
-        List<String> from = OpenSearchSqlConverter.explainFrom(visitor);
-        return from.stream().limit(1).map(name -> {
-            String[] appNameAndTable = name.split(",");
-            if (appNameAndTable.length == 1) {
-                return Tuple2.of(manager.getAppName().getName(), appNameAndTable[0]);
-            }
-            return Tuple2.of(appNameAndTable[0], appNameAndTable[1]);
-        }).collect(Collectors.toList());
     }
 }

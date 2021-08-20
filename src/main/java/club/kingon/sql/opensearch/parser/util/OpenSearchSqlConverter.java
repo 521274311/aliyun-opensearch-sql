@@ -3,6 +3,8 @@ package club.kingon.sql.opensearch.parser.util;
 import club.kingon.sql.opensearch.OpenSearchDqlException;
 import club.kingon.sql.opensearch.OpenSearchManager;
 import club.kingon.sql.opensearch.Tuple2;
+import club.kingon.sql.opensearch.parser.SQLParserException;
+import club.kingon.sql.opensearch.support.AbstractOpenSearchAppNameManager;
 import club.kingon.sql.opensearch.support.util.OpenSearchCheckUtil;
 import club.kingon.sql.opensearch.util.Constants;
 import club.kingon.sql.opensearch.util.PatternUtil;
@@ -19,6 +21,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * <p>OpenSearch Sql转换器</p>
@@ -51,6 +54,21 @@ public class OpenSearchSqlConverter {
         List<String> appNames = new ArrayList<>(names.size());
         names.forEach(n -> appNames.add(n.getName()));
         return appNames;
+    }
+
+    public static List<Tuple2<String, String>> explainAppNameAndTable(MySqlSchemaStatVisitor visitor, OpenSearchManager manager) {
+        List<String> from = OpenSearchSqlConverter.explainFrom(visitor, manager);
+        return from.stream().limit(1).map(name -> {
+            String[] appNameAndTable = name.split(",");
+            if (appNameAndTable.length == 1) {
+                if (manager instanceof AbstractOpenSearchAppNameManager && ((AbstractOpenSearchAppNameManager) manager).isEnableAppNameManagement()) {
+                    return Tuple2.of(manager.getAppName().getName(), appNameAndTable[0]);
+                } else {
+                    throw new SQLParserException("disable appname management or appname management is starting. please whether enableManagement value is true or increasing waitMills. or maybe you can rewrite 'table' -> 'appname.table'.");
+                }
+            }
+            return Tuple2.of(appNameAndTable[0], appNameAndTable[1]);
+        }).collect(Collectors.toList());
     }
 
     /**

@@ -28,19 +28,24 @@ public abstract class AbstractOpenSearchAppSchemaManager extends AbstractOpenSea
 
     private Map<String, Indexes> indexesMap;
 
-    protected boolean enableSchema = true;
+    protected boolean enableSchemaManagement;
 
     public AbstractOpenSearchAppSchemaManager(String accessKey, String secret, Endpoint endpoint, String appName) {
         this(accessKey, secret, endpoint, false, appName);
     }
 
     public AbstractOpenSearchAppSchemaManager(String accessKey, String secret, Endpoint endpoint, boolean intranet, String appName) {
-        super(accessKey, secret, endpoint, intranet, appName);
+        this(accessKey, secret, endpoint, intranet, appName, true, true);
+    }
+
+    public AbstractOpenSearchAppSchemaManager(String accessKey, String secret, Endpoint endpoint, boolean intranet, String appName, boolean enableAppNameManagement, boolean enableSchemaManagement) {
+        super(accessKey, secret, endpoint, intranet, appName, enableAppNameManagement);
+        this.enableSchemaManagement = enableSchemaManagement;
     }
 
     @Override
-    protected void startAsyncTask() {
-        addRefreshTaskFirst(Tuple2.of((t) -> enableSchema, (t) -> {
+    protected void addTask() {
+        addRefreshTask(Tuple2.of((t) -> enableSchemaManagement, (t) -> {
             // 需要存储应用版本信息
             AppName appNameObj = getAppName();
             if (appNameObj != null) {
@@ -79,7 +84,6 @@ public abstract class AbstractOpenSearchAppSchemaManager extends AbstractOpenSea
                 indexesMap = newIndexesMap;
             }
         }), Tuple2.of(null, null));
-        super.startAsyncTask();
     }
 
     @Override
@@ -174,6 +178,15 @@ public abstract class AbstractOpenSearchAppSchemaManager extends AbstractOpenSea
 
     private boolean emptySchema(String version) {
         return versionSchemaMap == null || versionSchemaMap.get(version) == null;
+    }
+
+    @Override
+    public void setEnableAppNameManagement(boolean enableAppNameManagement) {
+        super.setEnableAppNameManagement(enableAppNameManagement);
+    }
+
+    public boolean isEnableSchemaManagement() {
+        return enableSchemaManagement;
     }
 
     private boolean emptyIndexes(String version) {
