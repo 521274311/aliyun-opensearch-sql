@@ -9,7 +9,6 @@ import club.kingon.sql.opensearch.api.entry.Table;
 import club.kingon.sql.opensearch.parser.entry.OpenSearchDataOperationEntry;
 import club.kingon.sql.opensearch.parser.entry.OpenSearchEntry;
 import club.kingon.sql.opensearch.parser.util.OpenSearchSqlConverter;
-import club.kingon.sql.opensearch.support.AbstractOpenSearchAppNameManager;
 import club.kingon.sql.opensearch.support.AbstractOpenSearchAppSchemaManager;
 import com.alibaba.druid.sql.ast.expr.SQLBinaryOpExpr;
 import com.alibaba.druid.sql.ast.expr.SQLIdentifierExpr;
@@ -23,7 +22,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 /**
  * @author dragons
