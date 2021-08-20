@@ -31,6 +31,8 @@ public abstract class AbstractOpenSearchRefreshTaskManager extends AbstractOpenS
 
     private Thread asyncTaskThread;
 
+    private final Object lock = new Object();
+
     public AbstractOpenSearchRefreshTaskManager(String accessKey, String secret, Endpoint endpoint) {
         this(accessKey, secret, endpoint, false);
     }
@@ -40,23 +42,30 @@ public abstract class AbstractOpenSearchRefreshTaskManager extends AbstractOpenS
         startRefreshTask();
     }
 
+    public AbstractOpenSearchRefreshTaskManager(String accessKey, String secret, Endpoint endpoint, boolean intranet, long refreshMills) {
+        super(accessKey, secret, endpoint, intranet);
+        this.refreshMills = refreshMills;
+        startRefreshTask();
+    }
+
     private void startRefreshTask() {
         // 递归注入循环任务
-        injectionTask();
+        injectTask();
         asyncTaskThread = new Thread(() -> {
             while (true) {
-                if (refreshTaskFunctions.size() != refreshTaskDatas.size()) {
-                    continue;
-                }
-
-                for (int i = 0; i < refreshTaskFunctions.size(); i++) {
-                    if (refreshTaskFunctions.get(i).t1.test(refreshTaskDatas.get(i).t1)) {
-                        refreshTaskFunctions.get(i).t2.accept(refreshTaskDatas.get(i).t2);
-                    }
-                }
-
                 try {
-                    Thread.sleep(refreshMills);
+                    if (refreshTaskFunctions.size() != refreshTaskDatas.size()) {
+                        continue;
+                    }
+
+                    for (int i = 0; i < refreshTaskFunctions.size(); i++) {
+                        if (refreshTaskFunctions.get(i).t1.test(refreshTaskDatas.get(i).t1)) {
+                            refreshTaskFunctions.get(i).t2.accept(refreshTaskDatas.get(i).t2);
+                        }
+                    }
+                    synchronized (lock) {
+                        lock.wait(refreshMills);
+                    }
                 } catch (InterruptedException e) {
                     break;
                 }
@@ -65,7 +74,7 @@ public abstract class AbstractOpenSearchRefreshTaskManager extends AbstractOpenS
         asyncTaskThread.start();
     }
 
-    private void injectionTask() {
+    private void injectTask() {
         Class<?> invokeClass = getClass();
         Class<?> superClass = getClass();
         MethodType methodType = MethodType.methodType(void.class);
@@ -104,6 +113,12 @@ public abstract class AbstractOpenSearchRefreshTaskManager extends AbstractOpenS
     }
 
     protected abstract void addTask();
+
+    protected void runRefreshTaskOnce() {
+        synchronized (lock) {
+            lock.notify();
+        }
+    }
 
     @Override
     public void close() {
