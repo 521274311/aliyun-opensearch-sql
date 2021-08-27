@@ -71,8 +71,8 @@ public class DefaultOpenSearchQueryIterator extends AbstractOpenSearchQueryItera
                 }
                 return false;
             }
-            JSONObject resultJson = JSON.parseObject(searchResult.getResult());
             if (data.getQueryMode() == SearchQueryModeEnum.SCROLL) {
+                JSONObject resultJson = JSON.parseObject(searchResult.getResult());
                 String scrollId = resultJson.getJSONObject(ResponseConstants.RESULT).getString(ResponseConstants.SCROLLID);
                 if (data.getDeepPaging().getScrollId() == null) {
                     data.getDeepPaging().setScrollId(scrollId);
