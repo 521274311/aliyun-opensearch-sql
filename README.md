@@ -163,7 +163,7 @@ public class Test {
                                '}';
                   }
               }
-              // Demo 简写，生产环境TypeReference对象创建一个复用即可
+              // Demo 简写，生产环境TypeReference对象创建一个复用即可, 避免重复创建对象占用资源
               OpenSearchQueryResult<A> result = it2.next(new TypeReference<OpenSearchQueryResult<A>>() {});
               System.out.println(result);
         }
