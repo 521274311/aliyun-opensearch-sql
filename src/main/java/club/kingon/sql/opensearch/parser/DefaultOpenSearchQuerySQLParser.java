@@ -10,6 +10,8 @@ import club.kingon.sql.opensearch.parser.util.OpenSearchSqlConverter;
 import com.alibaba.druid.sql.ast.statement.SQLSelectStatement;
 import com.alibaba.druid.sql.dialect.mysql.ast.statement.MySqlSelectQueryBlock;
 import com.aliyun.opensearch.sdk.generated.search.DeepPaging;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.Map;
@@ -21,6 +23,8 @@ import java.util.Map;
 public class DefaultOpenSearchQuerySQLParser extends AbstractOpenSearchSQLParser {
 
     protected MySqlSelectQueryBlock block;
+
+    private final static Logger log = LoggerFactory.getLogger(DefaultOpenSearchQuerySQLParser.class);
 
     public DefaultOpenSearchQuerySQLParser(String sql, OpenSearchManager manager) {
         super(sql, manager);
@@ -43,13 +47,18 @@ public class DefaultOpenSearchQuerySQLParser extends AbstractOpenSearchSQLParser
         config.setAggregates(OpenSearchSqlConverter.explainAggregate(block, visitor));
         config.setSort(OpenSearchSqlConverter.explainSort(block, manager));
         Tuple2<Integer, Integer> offsetAndCount = OpenSearchSqlConverter.explainStartAndHit(block.getLimit());
-        if (offsetAndCount.t2 == null || offsetAndCount.t2 > Constants.MAX_ALL_HIT) {
+        if (offsetAndCount.t2 == null) {
             config.setQueryMode(SearchQueryModeEnum.SCROLL);
             config.setCount(Integer.MAX_VALUE);
             DeepPaging deepPaging = new DeepPaging();
             deepPaging.setScrollExpire(Constants.FIVE_MINUTE_ABBREVIATION);
             config.setDeepPaging(deepPaging);
         } else {
+            if (offsetAndCount.t2 > Constants.MAX_ALL_HIT) {
+                offsetAndCount.t2 = Constants.MAX_ALL_HIT;
+                log.warn("your limit value already exceeds opensearch hit limit that max {}. the upper limit value is automatically changed to {} here.",
+                        Constants.MAX_ALL_HIT, Constants.MAX_ALL_HIT);
+            }
             config.setOffset(offsetAndCount.t1);
             config.setCount(offsetAndCount.t2);
         }
