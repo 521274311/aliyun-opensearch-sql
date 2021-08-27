@@ -38,28 +38,58 @@ public class DefaultOpenSearchSqlClient implements OpenSearchSqlClient {
         this(accessKey, secret, endpoint, null);
     }
 
+    public DefaultOpenSearchSqlClient(String accessKey, String secret, Endpoint endpoint, int connectionTimeout, int readTimeout) {
+        this(accessKey, secret, endpoint, null, connectionTimeout, readTimeout);
+    }
+
     public DefaultOpenSearchSqlClient(String accessKey, String secret, Endpoint endpoint, boolean intranet) {
         this(accessKey, secret, endpoint, intranet, null);
+    }
+
+    public DefaultOpenSearchSqlClient(String accessKey, String secret, Endpoint endpoint, boolean intranet, int connectionTimeout, int readTimeout) {
+        this(accessKey, secret, endpoint, intranet, null, connectionTimeout, readTimeout);
     }
 
     public DefaultOpenSearchSqlClient(String accessKey, String secret, Endpoint endpoint, String appName) {
         this(accessKey, secret, endpoint, appName, 2000L);
     }
 
+    public DefaultOpenSearchSqlClient(String accessKey, String secret, Endpoint endpoint, String appName, int connectionTimeout, int readTimeout) {
+        this(accessKey, secret, endpoint, appName, 2000L, connectionTimeout, readTimeout);
+    }
+
     public DefaultOpenSearchSqlClient(String accessKey, String secret, Endpoint endpoint, String appName, long startWaitMills) {
         this(accessKey, secret, endpoint, false, appName, startWaitMills);
+    }
+
+    public DefaultOpenSearchSqlClient(String accessKey, String secret, Endpoint endpoint, String appName, long startWaitMills, int connectionTimeout, int readTimeout) {
+        this(accessKey, secret, endpoint, false, appName, startWaitMills, connectionTimeout, readTimeout);
     }
 
     public DefaultOpenSearchSqlClient(String accessKey, String secret, Endpoint endpoint, boolean intranet, String appName) {
         this(accessKey, secret, endpoint, intranet, appName, 2000L);
     }
 
+    public DefaultOpenSearchSqlClient(String accessKey, String secret, Endpoint endpoint, boolean intranet, String appName, int connectionTimeout, int readTimeout) {
+        this(accessKey, secret, endpoint, intranet, appName, 2000L, connectionTimeout, readTimeout);
+    }
+
     public DefaultOpenSearchSqlClient(String accessKey, String secret, Endpoint endpoint, boolean intranet, String appName, long startWaitMills) {
         this(accessKey, secret, endpoint, intranet, appName, startWaitMills, true);
     }
 
+    public DefaultOpenSearchSqlClient(String accessKey, String secret, Endpoint endpoint, boolean intranet, String appName, long startWaitMills, int connectionTimeout, int readTimeout) {
+        this(accessKey, secret, endpoint, intranet, appName, startWaitMills, true, connectionTimeout, readTimeout);
+    }
+
     public DefaultOpenSearchSqlClient(String accessKey, String secret, Endpoint endpoint, boolean intranet, String appName, long startWaitMills, boolean enableManagement) {
-        openSearchManager = new DefaultOpenSearchAppManager(accessKey, secret,endpoint, intranet, appName, startWaitMills, enableManagement);
+        this(accessKey, secret, endpoint, intranet, appName, startWaitMills, enableManagement, -1 , -1);
+    }
+
+    public DefaultOpenSearchSqlClient(String accessKey, String secret, Endpoint endpoint, boolean intranet,
+                                      String appName, long startWaitMills, boolean enableManagement,
+                                      int connectionTimeout, int readTimeout) {
+        openSearchManager = new DefaultOpenSearchAppManager(accessKey, secret,endpoint, intranet, appName, startWaitMills, enableManagement, connectionTimeout, readTimeout);
         searcherClient = new SearcherClient(openSearchManager.getOpenSearchClient());
         documentClient = new DocumentClient(openSearchManager.getOpenSearchClient());
         sqlParser = new DefaultOpenSearchSQLParser(openSearchManager, this);

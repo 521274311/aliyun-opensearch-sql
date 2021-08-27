@@ -25,18 +25,34 @@ public abstract class AbstractOpenSearchClientManager implements OpenSearchManag
 
     protected OpenSearchClient openSearchClient;
 
+    private final static int DEFAULT_CONNECTION_TIMEOUT = 10_000;
+
+    private final static int DEFAULT_READ_TIMEOUT = 5_000;
+
     public AbstractOpenSearchClientManager(String accessKey, String secret, Endpoint endpoint) {
         this(accessKey, secret, endpoint, false);
     }
 
     public AbstractOpenSearchClientManager(String accessKey, String secret, Endpoint endpoint, boolean intranet) {
+        this(accessKey, secret, endpoint, intranet, DEFAULT_CONNECTION_TIMEOUT, DEFAULT_READ_TIMEOUT);
+    }
+
+    public AbstractOpenSearchClientManager(String accessKey, String secret, Endpoint endpoint, boolean intranet, int connectionTimeout, int readTimeout) {
         this.accessKey = accessKey;
         this.secret = secret;
         this.endpoint = endpoint;
         this.intranet = intranet;
         aliyunApiClient = new DefaultAliyunApiClient(accessKey, secret, endpoint);
         String openSearchServerUrl = "http://" + (intranet ? "intranet." : "") + "opensearch-" + endpoint.getRegionId() + ".aliyuncs.com";
-        openSearchClient = new OpenSearchClient(new OpenSearch(accessKey, secret, openSearchServerUrl));
+        OpenSearch openSearch = new OpenSearch(accessKey, secret, openSearchServerUrl);
+        if (connectionTimeout >= 0) {
+            openSearch.setConnectTimeout(connectionTimeout);
+        }
+        if (readTimeout >= 0) {
+            openSearch.setTimeout(readTimeout);
+        }
+        openSearchClient = new OpenSearchClient(openSearch);
+
     }
 
     @Override

@@ -24,11 +24,11 @@ public abstract class AbstractOpenSearchAppSchemaManager extends AbstractOpenSea
 
     private final static Logger log = LoggerFactory.getLogger(AbstractOpenSearchAppSchemaManager.class);
 
-    private Map<String, Schema> versionSchemaMap;
+    private volatile Map<String, Schema> versionSchemaMap;
 
-    private Map<String, Indexes> indexesMap;
+    private volatile Map<String, Indexes> indexesMap;
 
-    protected boolean enableSchemaManagement;
+    protected volatile boolean enableSchemaManagement;
 
     public AbstractOpenSearchAppSchemaManager(String accessKey, String secret, Endpoint endpoint, String appName) {
         this(accessKey, secret, endpoint, false, appName);
@@ -39,7 +39,13 @@ public abstract class AbstractOpenSearchAppSchemaManager extends AbstractOpenSea
     }
 
     public AbstractOpenSearchAppSchemaManager(String accessKey, String secret, Endpoint endpoint, boolean intranet, String appName, boolean enableAppNameManagement, boolean enableSchemaManagement) {
-        super(accessKey, secret, endpoint, intranet, appName, enableAppNameManagement);
+        this(accessKey, secret, endpoint, intranet, appName, enableAppNameManagement, enableSchemaManagement, -1, -1);
+    }
+
+    public AbstractOpenSearchAppSchemaManager(String accessKey, String secret, Endpoint endpoint, boolean intranet,
+                                              String appName, boolean enableAppNameManagement, boolean enableSchemaManagement,
+                                              int connectionTimeout, int readTimeout) {
+        super(accessKey, secret, endpoint, intranet, appName, enableAppNameManagement, connectionTimeout, readTimeout);
         this.enableSchemaManagement = enableSchemaManagement;
     }
 

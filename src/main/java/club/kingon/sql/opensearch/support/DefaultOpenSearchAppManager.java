@@ -37,7 +37,14 @@ public class DefaultOpenSearchAppManager extends AbstractOpenSearchAppSchemaMana
     }
 
     public DefaultOpenSearchAppManager(String accessKey, String secret, Endpoint endpoint, boolean intranet, String appName, long startWaitMills, boolean enableManagement) {
-        super(accessKey, secret, endpoint, intranet, appName, enableManagement, enableManagement);
+        this(accessKey, secret, endpoint, intranet, appName, startWaitMills, enableManagement, -1, -1);
+
+    }
+
+    public DefaultOpenSearchAppManager(String accessKey, String secret, Endpoint endpoint, boolean intranet,
+                                       String appName, long startWaitMills, boolean enableManagement,
+                                       int connectionTimeout, int readTimeout) {
+        super(accessKey, secret, endpoint, intranet, appName, enableManagement, enableManagement, connectionTimeout, readTimeout);
         sleep(startWaitMills);
     }
 
