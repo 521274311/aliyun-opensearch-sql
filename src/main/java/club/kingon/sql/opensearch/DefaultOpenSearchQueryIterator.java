@@ -236,7 +236,7 @@ public class DefaultOpenSearchQueryIterator extends AbstractOpenSearchQueryItera
 
     @Override
     public String express() {
-        return data == null ? "" : OpenSearchBuilderUtil.builder(data).toString();
+        return data == null ? "" : data.getCount() == 0 ? "finish" : OpenSearchBuilderUtil.builder(data).toString();
     }
 
     /**
