@@ -8,6 +8,7 @@
 ##### 3.默认展示字段建议添加全部字段, 在具体业务中通过select指定需要返回的字段
 ##### 4.非SCROLL(全量查询)模式sql请务必加上limit以启用HIT查询模式.(HIT查询模式最大查询指定条件的top5000), SCROLL模式不支持打散与聚合
 ##### 5.建议聚合模式limit 1即可, 聚合结果存在facet->group->items中
+##### 6.开发环境下查询时可通过调用DefaultOpenSearchQueryIterator#express()方法查询迭代器下一次查询条件, 用于快速排查问题, 生产环境建议关闭(会有性能损耗)
 #### 参数建议:
 ##### 1.DefaultOpenSearchSqlClient客户端
 ##### 1.1.查询场景下建议选择填入AppName的构造方法, 填入AppName将会对sql解析进行优化。
