@@ -341,6 +341,10 @@ query=name:'drag' ANDNOT name:'dragons'
 
 
 ### 优化记录
+##### 2021-08-27
+1. OpenSearchSqlClient 添加超时参数配置，connectionTimeout配置连接超时时间, readTimeout配置读超时时间, 单位均为ms.
+2. 修复DefaultOpenSearchQueryIterator#next()方法在非scroll模式的不必要的Json解析.
+3. 调整scroll模式触发条件, 原触发条件为无limit或limit最大值超过5000，现调整为无limit触发,若limit最大/小值超过5000将设定为5000.
 ##### 2021-08-05
 1. 要求显示声明query与filter, query通过"like"方式, 其他表达式均为filter, 示例如下:
 ```

@@ -1,5 +1,6 @@
 package club.kingon.sql.opensearch.parser;
 
+import club.kingon.sql.opensearch.OpenSearchDqlException;
 import club.kingon.sql.opensearch.OpenSearchManager;
 import club.kingon.sql.opensearch.SearchQueryModeEnum;
 import club.kingon.sql.opensearch.Tuple2;
@@ -54,10 +55,15 @@ public class DefaultOpenSearchQuerySQLParser extends AbstractOpenSearchSQLParser
             deepPaging.setScrollExpire(Constants.FIVE_MINUTE_ABBREVIATION);
             config.setDeepPaging(deepPaging);
         } else {
-            if (offsetAndCount.t2 > Constants.MAX_ALL_HIT) {
-                offsetAndCount.t2 = Constants.MAX_ALL_HIT;
-                log.warn("your limit value already exceeds opensearch hit limit that max {}. the upper limit value is automatically changed to {} here.",
-                        Constants.MAX_ALL_HIT, Constants.MAX_ALL_HIT);
+            if (offsetAndCount.t1 == null) {
+                offsetAndCount.t1 = Constants.MIN_ONE_START;
+            }
+            if (offsetAndCount.t1 >= Constants.MAX_ALL_HIT) {
+                throw new OpenSearchDqlException("limit first param must be less than " + Constants.MAX_ALL_HIT);
+            }
+            if (offsetAndCount.t1 + offsetAndCount.t2 > Constants.MAX_ALL_HIT) {
+                log.warn("your limit value already exceeds opensearch hit limit that max(offset + hit = {} + {}). the upper limit value hit is automatically changed to {} here.",
+                        offsetAndCount.t1, offsetAndCount.t2, (offsetAndCount.t2 = Constants.MAX_ALL_HIT - offsetAndCount.t1));
             }
             config.setOffset(offsetAndCount.t1);
             config.setCount(offsetAndCount.t2);
