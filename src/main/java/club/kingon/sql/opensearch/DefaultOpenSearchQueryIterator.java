@@ -244,6 +244,7 @@ public class DefaultOpenSearchQueryIterator extends AbstractOpenSearchQueryItera
      */
     @Override
     public <T extends QueryObject> OpenSearchQueryResult<T> next(TypeReference<OpenSearchQueryResult<T>> clazz) {
+        waitPagingInterval();
         if (this.result == null) return null;
         OpenSearchQueryResult<T> res = JSON.parseObject(this.result.getResult(), clazz);
         result = null;
