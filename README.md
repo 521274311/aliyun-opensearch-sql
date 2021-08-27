@@ -151,7 +151,7 @@ public class Test {
                                '}';
                   }
               }
-              OpenSearchQueryResult<A> result = it1.next(new TypeReference<OpenSearchQueryResult<A>>());
+              OpenSearchQueryResult<A> result = it2.next(new TypeReference<OpenSearchQueryResult<A>>());
               System.out.println(result);
         }
     }
