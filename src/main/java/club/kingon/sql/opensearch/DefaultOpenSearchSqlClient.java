@@ -117,11 +117,6 @@ public class DefaultOpenSearchSqlClient implements OpenSearchSqlClient {
     }
 
     @Override
-    public OpenSearchQueryIterator queryAggregate(String sql, Set<Aggregate> aggregates) {
-        return query(sql, null, aggregates);
-    }
-
-    @Override
     public OpenSearchResult insert(String sql) {
         OpenSearchDataOperationEntry entry = sqlParser.parse(sql);
         for (Map<String, Object> data : entry.getData()) {

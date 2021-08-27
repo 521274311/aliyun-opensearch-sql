@@ -20,8 +20,6 @@ public interface OpenSearchSqlClient {
 
     OpenSearchQueryIterator query(String sql, Set<Distinct> distincts, Set<Aggregate> aggregates);
 
-    OpenSearchQueryIterator queryAggregate(String sql, Set<Aggregate> aggregates);
-
     OpenSearchResult insert(String sql);
 
     OpenSearchResult update(String sql);
