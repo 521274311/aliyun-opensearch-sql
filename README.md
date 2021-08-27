@@ -344,7 +344,43 @@ query=name:'drag' ANDNOT name:'dragons'
 ##### 2021-08-27
 1. OpenSearchSqlClient 添加超时参数配置，connectionTimeout配置连接超时时间, readTimeout配置读超时时间, 单位均为ms.
 2. 修复DefaultOpenSearchQueryIterator#next()方法在非scroll模式的不必要的Json解析.
-3. 调整scroll模式触发条件, 原触发条件为无limit或limit最大值超过5000，现调整为无limit触发,若limit最大/小值超过5000将设定为5000.
+3. 调整scroll模式触发条件, 原触发条件为无limit或limit最大值超过5000，现调整为无limit触发,若limit最大/小值超过5000将设定为5000. 
+4. 增加aggregate参数化方式注入。（OpenSearch聚合仅支持某一属性的多个不同方法，通过sql表达容易让人误解以为可以通过多个属性一起聚合，所以为了更容易表明含义及提供更强的功能，将aggregate以参数化形式注入。原sql提供的aggregate与distinct功能不变）  
+
+```sql
+-- sql尚未解决示例：以age分组统计最大unique_id以及最大uid
+-- 由于OpenSearch仅支持同一aggregate同一属性同一方法仅支持使用一次，所以如下的sql仅会查出最大的uid值
+select max(unique_id), max(uid)
+from app_name
+group by age;
+```
+解决方案：使用参数化注入aggregate
+```java
+
+public class Test {
+    public static void main(String[] args){
+        String appName = "app_name";
+        String sql = "select unique_id from " + appName + " limit 1";
+        String accessKey = "...";
+        String secret = "...";
+        OpenSearchSqlClient client = new DefaultOpenSearchSqlClient(accessKey, secret, (Endpoint).SHENZHEN, appName);
+        
+        Set<Aggregate> aggregateSet = new HashSet<>();
+        Aggregate agg1 = new Aggregate();
+        agg1.setGroupKey("age");
+        agg1.setAggFun("max(unique_id)");
+        Aggregate agg2 = new Aggregate();
+        agg2.setGroupKey("age");
+        agg2.setAggFun("max(uid)");
+        aggregateSet.add(agg1);
+        aggregateSet.add(agg2);
+        OpenSearchQueryIterator it = client.query(sql, null, aggregateSet);
+        while (it.hasSuccessfulNext()) {
+            System.out.println(it.next().getResult());
+        }
+    }
+}
+```
 ##### 2021-08-05
 1. 要求显示声明query与filter, query通过"like"方式, 其他表达式均为filter, 示例如下:
 ```
