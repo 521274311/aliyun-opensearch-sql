@@ -11,6 +11,7 @@ import com.aliyun.opensearch.SearcherClient;
 import com.aliyun.opensearch.sdk.generated.commons.OpenSearchClientException;
 import com.aliyun.opensearch.sdk.generated.commons.OpenSearchException;
 import com.aliyun.opensearch.sdk.generated.commons.OpenSearchResult;
+import com.aliyun.opensearch.sdk.generated.search.Aggregate;
 import com.aliyun.opensearch.sdk.generated.search.Distinct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -98,12 +99,26 @@ public class DefaultOpenSearchSqlClient implements OpenSearchSqlClient {
 
     @Override
     public OpenSearchQueryIterator query(String sql, Set<Distinct> distincts) {
+        return query(sql, distincts, null);
+    }
+
+    @Override
+    public OpenSearchQueryIterator query(String sql, Set<Distinct> distincts, Set<Aggregate> aggregates) {
         OpenSearchQueryEntry config = sqlParser.parse(sql);
         // 支持distinct参数化注入
         if (distincts != null && !distincts.isEmpty()) {
             config.setDistincts(distincts);
         }
+        // 支持aggregate参数化注入
+        if (aggregates != null && !aggregates.isEmpty()) {
+            config.setAggregates(aggregates);
+        }
         return new DefaultOpenSearchQueryIterator(searcherClient, config);
+    }
+
+    @Override
+    public OpenSearchQueryIterator queryAggregate(String sql, Set<Aggregate> aggregates) {
+        return query(sql, null, aggregates);
     }
 
     @Override

@@ -1,6 +1,7 @@
 package club.kingon.sql.opensearch;
 
 import com.aliyun.opensearch.sdk.generated.commons.OpenSearchResult;
+import com.aliyun.opensearch.sdk.generated.search.Aggregate;
 import com.aliyun.opensearch.sdk.generated.search.Distinct;
 
 import java.util.Set;
@@ -16,6 +17,10 @@ public interface OpenSearchSqlClient {
     }
 
     OpenSearchQueryIterator query(String sql, Set<Distinct> distincts);
+
+    OpenSearchQueryIterator query(String sql, Set<Distinct> distincts, Set<Aggregate> aggregates);
+
+    OpenSearchQueryIterator queryAggregate(String sql, Set<Aggregate> aggregates);
 
     OpenSearchResult insert(String sql);
 
