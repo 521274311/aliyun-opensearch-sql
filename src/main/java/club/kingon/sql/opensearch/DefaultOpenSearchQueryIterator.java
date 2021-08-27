@@ -36,7 +36,7 @@ public class DefaultOpenSearchQueryIterator extends AbstractOpenSearchQueryItera
 
     private int retry = 0;
 
-    private long pagingInterval = 200L;
+    private long pagingInterval = 10L;
 
     private long retryTimeInterval = 200L;
 
