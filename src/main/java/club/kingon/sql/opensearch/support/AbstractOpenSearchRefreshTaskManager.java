@@ -27,7 +27,7 @@ public abstract class AbstractOpenSearchRefreshTaskManager extends AbstractOpenS
 
     private final List<Tuple2<?, ?>> refreshTaskDatas = new ArrayList<>();
 
-    protected long refreshMills = 10 * 1000L;
+    protected long refreshMills = 30 * 60 * 1000L;
 
     private Thread asyncTaskThread;
 
