@@ -236,8 +236,8 @@ public class Test {
 }
 ```
 #### 实战(常见问题汇总)
-```sql
-1.like 语法比价的值若不是OpenSearch模糊搜索索引左右需均带上%,即使是关键词索引需要精确匹配两边也需带上%。OpenSearch模糊查询文档：https://help.aliyun.com/document_detail/179439.html
+```
+1.like 语法比较的值若不是OpenSearch模糊搜索索引左右需均带上%,即使是关键词索引需要精确匹配两边也需带上%(v0.1.0-SNAPSHOT可忽略)。OpenSearch模糊查询文档：https://help.aliyun.com/document_detail/179439.html
 select *
 from app_name
 where kname like '%dragons%' 
@@ -270,8 +270,10 @@ limit 10;
 query=kname:'dragons' OR id:'1'
 ```
 
-#### 当前版本: v0.0.3-SNAPSHOT
-#### 当前版本支持：
+#### 当前版本: v0.1.0-SNAPSHOT
+
+
+#### 历史变更：v0.0.3-SNAPSHOT
 1. 在v0.0.2-SNAPSHOT版本上,剔除了动态选择query与filter功能(防止判错导致查询失败), 转而使用强类型声明方式:  
 ```
 1. 强制要求使用 like 方式声明query查询
