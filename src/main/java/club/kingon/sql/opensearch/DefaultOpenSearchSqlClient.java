@@ -11,6 +11,7 @@ import com.aliyun.opensearch.SearcherClient;
 import com.aliyun.opensearch.sdk.generated.commons.OpenSearchClientException;
 import com.aliyun.opensearch.sdk.generated.commons.OpenSearchException;
 import com.aliyun.opensearch.sdk.generated.commons.OpenSearchResult;
+import com.aliyun.opensearch.sdk.generated.search.Aggregate;
 import com.aliyun.opensearch.sdk.generated.search.Distinct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,28 +39,58 @@ public class DefaultOpenSearchSqlClient implements OpenSearchSqlClient {
         this(accessKey, secret, endpoint, null);
     }
 
+    public DefaultOpenSearchSqlClient(String accessKey, String secret, Endpoint endpoint, int connectionTimeout, int readTimeout) {
+        this(accessKey, secret, endpoint, null, connectionTimeout, readTimeout);
+    }
+
     public DefaultOpenSearchSqlClient(String accessKey, String secret, Endpoint endpoint, boolean intranet) {
         this(accessKey, secret, endpoint, intranet, null);
+    }
+
+    public DefaultOpenSearchSqlClient(String accessKey, String secret, Endpoint endpoint, boolean intranet, int connectionTimeout, int readTimeout) {
+        this(accessKey, secret, endpoint, intranet, null, connectionTimeout, readTimeout);
     }
 
     public DefaultOpenSearchSqlClient(String accessKey, String secret, Endpoint endpoint, String appName) {
         this(accessKey, secret, endpoint, appName, 2000L);
     }
 
+    public DefaultOpenSearchSqlClient(String accessKey, String secret, Endpoint endpoint, String appName, int connectionTimeout, int readTimeout) {
+        this(accessKey, secret, endpoint, appName, 2000L, connectionTimeout, readTimeout);
+    }
+
     public DefaultOpenSearchSqlClient(String accessKey, String secret, Endpoint endpoint, String appName, long startWaitMills) {
         this(accessKey, secret, endpoint, false, appName, startWaitMills);
+    }
+
+    public DefaultOpenSearchSqlClient(String accessKey, String secret, Endpoint endpoint, String appName, long startWaitMills, int connectionTimeout, int readTimeout) {
+        this(accessKey, secret, endpoint, false, appName, startWaitMills, connectionTimeout, readTimeout);
     }
 
     public DefaultOpenSearchSqlClient(String accessKey, String secret, Endpoint endpoint, boolean intranet, String appName) {
         this(accessKey, secret, endpoint, intranet, appName, 2000L);
     }
 
+    public DefaultOpenSearchSqlClient(String accessKey, String secret, Endpoint endpoint, boolean intranet, String appName, int connectionTimeout, int readTimeout) {
+        this(accessKey, secret, endpoint, intranet, appName, 2000L, connectionTimeout, readTimeout);
+    }
+
     public DefaultOpenSearchSqlClient(String accessKey, String secret, Endpoint endpoint, boolean intranet, String appName, long startWaitMills) {
         this(accessKey, secret, endpoint, intranet, appName, startWaitMills, true);
     }
 
+    public DefaultOpenSearchSqlClient(String accessKey, String secret, Endpoint endpoint, boolean intranet, String appName, long startWaitMills, int connectionTimeout, int readTimeout) {
+        this(accessKey, secret, endpoint, intranet, appName, startWaitMills, true, connectionTimeout, readTimeout);
+    }
+
     public DefaultOpenSearchSqlClient(String accessKey, String secret, Endpoint endpoint, boolean intranet, String appName, long startWaitMills, boolean enableManagement) {
-        openSearchManager = new DefaultOpenSearchAppManager(accessKey, secret,endpoint, intranet, appName, startWaitMills, enableManagement);
+        this(accessKey, secret, endpoint, intranet, appName, startWaitMills, enableManagement, -1 , -1);
+    }
+
+    public DefaultOpenSearchSqlClient(String accessKey, String secret, Endpoint endpoint, boolean intranet,
+                                      String appName, long startWaitMills, boolean enableManagement,
+                                      int connectionTimeout, int readTimeout) {
+        openSearchManager = new DefaultOpenSearchAppManager(accessKey, secret,endpoint, intranet, appName, startWaitMills, enableManagement, connectionTimeout, readTimeout);
         searcherClient = new SearcherClient(openSearchManager.getOpenSearchClient());
         documentClient = new DocumentClient(openSearchManager.getOpenSearchClient());
         sqlParser = new DefaultOpenSearchSQLParser(openSearchManager, this);
@@ -68,10 +99,19 @@ public class DefaultOpenSearchSqlClient implements OpenSearchSqlClient {
 
     @Override
     public OpenSearchQueryIterator query(String sql, Set<Distinct> distincts) {
+        return query(sql, distincts, null);
+    }
+
+    @Override
+    public OpenSearchQueryIterator query(String sql, Set<Distinct> distincts, Set<Aggregate> aggregates) {
         OpenSearchQueryEntry config = sqlParser.parse(sql);
         // 支持distinct参数化注入
         if (distincts != null && !distincts.isEmpty()) {
             config.setDistincts(distincts);
+        }
+        // 支持aggregate参数化注入
+        if (aggregates != null && !aggregates.isEmpty()) {
+            config.setAggregates(aggregates);
         }
         return new DefaultOpenSearchQueryIterator(searcherClient, config);
     }

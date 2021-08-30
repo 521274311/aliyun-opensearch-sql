@@ -36,7 +36,7 @@ public class DefaultOpenSearchQueryIterator extends AbstractOpenSearchQueryItera
 
     private int retry = 0;
 
-    private long pagingInterval = 200L;
+    private long pagingInterval = 10L;
 
     private long retryTimeInterval = 200L;
 
@@ -71,8 +71,8 @@ public class DefaultOpenSearchQueryIterator extends AbstractOpenSearchQueryItera
                 }
                 return false;
             }
-            JSONObject resultJson = JSON.parseObject(searchResult.getResult());
             if (data.getQueryMode() == SearchQueryModeEnum.SCROLL) {
+                JSONObject resultJson = JSON.parseObject(searchResult.getResult());
                 String scrollId = resultJson.getJSONObject(ResponseConstants.RESULT).getString(ResponseConstants.SCROLLID);
                 if (data.getDeepPaging().getScrollId() == null) {
                     data.getDeepPaging().setScrollId(scrollId);
@@ -236,7 +236,7 @@ public class DefaultOpenSearchQueryIterator extends AbstractOpenSearchQueryItera
 
     @Override
     public String express() {
-        return data == null ? "" : OpenSearchBuilderUtil.builder(data).toString();
+        return data == null ? "" : data.getCount() == 0 ? "finish" : OpenSearchBuilderUtil.builder(data).toString();
     }
 
     /**
@@ -244,6 +244,7 @@ public class DefaultOpenSearchQueryIterator extends AbstractOpenSearchQueryItera
      */
     @Override
     public <T extends QueryObject> OpenSearchQueryResult<T> next(TypeReference<OpenSearchQueryResult<T>> clazz) {
+        waitPagingInterval();
         if (this.result == null) return null;
         OpenSearchQueryResult<T> res = JSON.parseObject(this.result.getResult(), clazz);
         result = null;

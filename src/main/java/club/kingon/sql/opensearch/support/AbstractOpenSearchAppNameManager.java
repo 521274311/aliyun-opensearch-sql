@@ -26,21 +26,28 @@ public abstract class AbstractOpenSearchAppNameManager extends AbstractOpenSearc
 
     private volatile String appName;
 
-    private boolean enableAppNameManagement;
+    private volatile boolean enableAppNameManagement;
 
     public AbstractOpenSearchAppNameManager(String accessKey, String secret, Endpoint endpoint, String appName) {
         this(accessKey, secret, endpoint, false, appName);
     }
 
     public AbstractOpenSearchAppNameManager(String accessKey, String secret, Endpoint endpoint, boolean intranet, String appName) {
-        this(accessKey, secret, endpoint, false, appName, true);
+        this(accessKey, secret, endpoint, intranet, appName, true);
     }
 
-    public AbstractOpenSearchAppNameManager(String accessKey, String secret, Endpoint endpoint, boolean intranet, String appName, boolean enableAppNameManagement) {
-        super(accessKey, secret, endpoint, intranet);
+    public AbstractOpenSearchAppNameManager(String accessKey, String secret, Endpoint endpoint, boolean intranet,
+                                            String appName, boolean enableAppNameManagement) {
+        this(accessKey, secret, endpoint, intranet, appName, enableAppNameManagement, -1, -1);
+    }
+
+    public AbstractOpenSearchAppNameManager(String accessKey, String secret, Endpoint endpoint, boolean intranet,
+                                            String appName, boolean enableAppNameManagement, int connectionTimeout, int readTimeout) {
+        super(accessKey, secret, endpoint, intranet, connectionTimeout, readTimeout);
         this.appName = appName;
         this.enableAppNameManagement = enableAppNameManagement;
     }
+
 
     @Override
     protected void addTask() {

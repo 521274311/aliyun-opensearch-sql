@@ -27,7 +27,7 @@ public abstract class AbstractOpenSearchRefreshTaskManager extends AbstractOpenS
 
     private final List<Tuple2<?, ?>> refreshTaskDatas = new ArrayList<>();
 
-    protected long refreshMills = 30 * 60 * 1000L;
+    protected long refreshMills = 10 * 1000L;
 
     private Thread asyncTaskThread;
 
@@ -38,7 +38,11 @@ public abstract class AbstractOpenSearchRefreshTaskManager extends AbstractOpenS
     }
 
     public AbstractOpenSearchRefreshTaskManager(String accessKey, String secret, Endpoint endpoint, boolean intranet) {
-        super(accessKey, secret, endpoint, intranet);
+        this(accessKey, secret, endpoint, intranet, -1, -1);
+    }
+
+    public AbstractOpenSearchRefreshTaskManager(String accessKey, String secret, Endpoint endpoint, boolean intranet, int connectionTimeout, int readTimeout) {
+        super(accessKey, secret, endpoint, intranet, connectionTimeout, readTimeout);
         startRefreshTask();
     }
 
@@ -89,7 +93,7 @@ public abstract class AbstractOpenSearchRefreshTaskManager extends AbstractOpenS
                         .bindTo(this)
                         .invoke();
                     if (log.isDebugEnabled()) {
-                        log.info("inject class: {} method named addTask.", superClass.getName());
+                        log.debug("inject class: {} method named addTask.", superClass.getName());
                     }
                 } catch (Throwable e) {
                 } finally {

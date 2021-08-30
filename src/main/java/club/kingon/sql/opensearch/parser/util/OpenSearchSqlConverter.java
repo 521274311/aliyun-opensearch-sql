@@ -88,9 +88,6 @@ public class OpenSearchSqlConverter {
             }
             if (limit.getRowCount() != null) {
                 count = (int) ((SQLIntegerExpr) limit.getRowCount()).getNumber();
-                if (offset == null) {
-                    offset = 0;
-                }
             }
         }
         return Tuple2.of(offset, count);

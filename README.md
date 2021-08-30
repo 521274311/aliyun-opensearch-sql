@@ -2,10 +2,22 @@
 ### 提供阿里云开放搜索SQL支持
 ##### 官方文档地址：https://help.aliyun.com/product/29102.html
 
-##### 使用建议: 
+#### 使用建议: 
 ##### 1.需要查询的字段至少创建一个与字段名同名索引
 ##### 2.需要查询的字段若支持设置为属性字段则添加到属性字段
-##### 3.默认展示字段建议添加全部字段, 在具体业务中指定需要返回的字段即可.
+##### 3.默认展示字段建议添加全部字段, 在具体业务中通过select指定需要返回的字段
+##### 4.非SCROLL(全量查询)模式sql请务必加上limit以启用HIT查询模式.(HIT查询模式最大查询指定条件的top5000), SCROLL模式不支持打散与聚合
+##### 5.建议聚合模式limit 1即可, 聚合结果存在facet->group->items中
+##### 6.开发环境下查询时可通过调用DefaultOpenSearchQueryIterator#express()方法查询迭代器下一次查询条件, 用于快速排查问题, 生产环境建议关闭(会有性能损耗)
+#### 参数建议:
+##### 1.DefaultOpenSearchSqlClient客户端
+##### 1.1.查询场景下建议选择填入AppName的构造方法, 填入AppName将会对sql解析进行优化。
+##### 1.2.建议设置连接超时时间与读超时时间，默认连接超时时间10s，读超时时间5s
+##### 1.3.若是阿里云服务器可选择带intranet参数的构造方法并将该值设置为true以启用内网访问
+##### 2.DefaultOpenSearchQueryIterator默认查询迭代器
+##### 2.1.若只需要接收成功的结果(即status="OK"),可使用DefaultOpenSearchQueryIterator#hasSuccessfulNext()方法判断，DefaultOpenSearchQueryIterator#next()方法失败结果也会返回，并且不会进行重试
+##### 2.2.使用DefaultOpenSearchQueryIterator#hasSuccessfulNext() 可通过可使用DefaultOpenSearchQueryIterator#setRetry()方法设置失败重试次数, 通过可使用DefaultOpenSearchQueryIterator#setRetryTimeInterval()方法设置重试间隔
+##### 2.3.若需要调整迭代时间间隔可通过DefaultOpenSearchQueryIterator#setPagingInterval()方法调整迭代间隔时间，单位:ms，默认:10ms(Ps:若查询速度过快而OpenSearch LCU不足可能会返回6015(资源受限)错误)
 #### SQL使用语法（同Mysql语法）：  
 ### 查询:  
 ```sql
@@ -151,7 +163,8 @@ public class Test {
                                '}';
                   }
               }
-              OpenSearchQueryResult<A> result = it2.next(new TypeReference<OpenSearchQueryResult<A>>());
+              // Demo 简写，生产环境TypeReference对象创建一个复用即可, 避免重复创建对象占用资源
+              OpenSearchQueryResult<A> result = it2.next(new TypeReference<OpenSearchQueryResult<A>>() {});
               System.out.println(result);
         }
     }
@@ -341,6 +354,46 @@ query=name:'drag' ANDNOT name:'dragons'
 
 
 ### 优化记录
+##### 2021-08-27
+1. OpenSearchSqlClient 添加超时参数配置，connectionTimeout配置连接超时时间, readTimeout配置读超时时间, 单位均为ms.
+2. 修复DefaultOpenSearchQueryIterator#next()方法在非scroll模式的不必要的Json解析.
+3. 调整scroll模式触发条件, 原触发条件为无limit或limit最大值超过5000，现调整为无limit触发,若limit最大/小值超过5000将设定为5000. 
+4. 增加aggregate参数化方式注入。（OpenSearch聚合仅支持某一属性的多个不同方法，通过sql表达容易让人误解以为可以通过多个属性一起聚合，所以为了更容易表明含义及提供更强的功能，将aggregate以参数化形式注入。原sql提供的aggregate与distinct功能不变）  
+
+```sql
+-- sql尚未解决示例：以age分组统计最大unique_id以及最大uid
+-- 由于OpenSearch仅支持同一aggregate同一属性同一方法仅支持使用一次，所以如下的sql仅会查出最大的uid值
+select max(unique_id), max(uid)
+from app_name
+group by age;
+```
+解决方案：使用参数化注入aggregate
+```java
+
+public class Test {
+    public static void main(String[] args){
+        String appName = "app_name";
+        String sql = "select unique_id from " + appName + " limit 1";
+        String accessKey = "...";
+        String secret = "...";
+        OpenSearchSqlClient client = new DefaultOpenSearchSqlClient(accessKey, secret, (Endpoint).SHENZHEN, appName);
+        
+        Set<Aggregate> aggregateSet = new HashSet<>();
+        Aggregate agg1 = new Aggregate();
+        agg1.setGroupKey("age");
+        agg1.setAggFun("max(unique_id)");
+        Aggregate agg2 = new Aggregate();
+        agg2.setGroupKey("age");
+        agg2.setAggFun("max(uid)");
+        aggregateSet.add(agg1);
+        aggregateSet.add(agg2);
+        OpenSearchQueryIterator it = client.query(sql, null, aggregateSet);
+        while (it.hasSuccessfulNext()) {
+            System.out.println(it.next().getResult());
+        }
+    }
+}
+```
 ##### 2021-08-05
 1. 要求显示声明query与filter, query通过"like"方式, 其他表达式均为filter, 示例如下:
 ```
