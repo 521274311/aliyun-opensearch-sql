@@ -72,7 +72,7 @@ public class QueryResult<T> implements Serializable {
     }
 
     public static class Item<T> {
-        private List<T> fields;
+        private T fields;
 
         private JSONObject property;
 
@@ -82,11 +82,11 @@ public class QueryResult<T> implements Serializable {
 
         private List<String> sortExprValues;
 
-        public List<T> getFields() {
+        public T getFields() {
             return fields;
         }
 
-        public void setFields(List<T> fields) {
+        public void setFields(T fields) {
             this.fields = fields;
         }
 
