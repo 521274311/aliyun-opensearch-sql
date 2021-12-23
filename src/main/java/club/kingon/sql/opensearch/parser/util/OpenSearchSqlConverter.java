@@ -149,7 +149,7 @@ public class OpenSearchSqlConverter {
         return queryAndFilter;
     }
 
-    public static Rank expainRank(Map<String, Object> mp) {
+    public static Rank explainRank(Map<String, Object> mp) {
         Rank rank = new Rank();
         String firstRankName = (String) mp.get(Constants.DEFAULT_FIRST_RANK_NAME),
             secondRankName = (String) mp.get(Constants.DEFAULT_SECOND_RANK_NAME);

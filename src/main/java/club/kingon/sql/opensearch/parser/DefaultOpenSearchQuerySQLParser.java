@@ -42,7 +42,7 @@ public class DefaultOpenSearchQuerySQLParser extends AbstractOpenSearchSQLParser
         config.setQuery(queryAndFilterAndParams.t1.t1);
         config.setFilter(queryAndFilterAndParams.t1.t2);
         config.setQueryProcessorNames((List<String>) queryAndFilterAndParams.t2.get(Constants.QUERY_PROCESSOR_NAMES));
-        config.setRank(OpenSearchSqlConverter.expainRank(queryAndFilterAndParams.t2));
+        config.setRank(OpenSearchSqlConverter.explainRank(queryAndFilterAndParams.t2));
         config.setKvpairs((String) queryAndFilterAndParams.t2.get(Constants.DEFAULT_KVPAIRS));
         config.setDistincts(OpenSearchSqlConverter.explainDistinct(block));
         config.setAggregates(OpenSearchSqlConverter.explainAggregate(block, visitor));

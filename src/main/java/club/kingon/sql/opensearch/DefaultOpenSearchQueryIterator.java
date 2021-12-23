@@ -12,7 +12,7 @@ import com.alibaba.fastjson.TypeReference;
 import com.aliyun.opensearch.SearcherClient;
 import com.aliyun.opensearch.sdk.generated.commons.OpenSearchClientException;
 import com.aliyun.opensearch.sdk.generated.commons.OpenSearchException;
-import com.aliyun.opensearch.sdk.generated.search.*;
+import com.aliyun.opensearch.sdk.generated.search.SearchParams;
 import com.aliyun.opensearch.sdk.generated.search.general.SearchResult;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -239,9 +239,6 @@ public class DefaultOpenSearchQueryIterator extends AbstractOpenSearchQueryItera
         return data == null ? "" : data.getCount() == 0 ? "finish" : OpenSearchBuilderUtil.builder(data).toString();
     }
 
-    /**
-     *
-     */
     @Override
     public <T extends QueryObject> OpenSearchQueryResult<T> next(TypeReference<OpenSearchQueryResult<T>> clazz) {
         waitPagingInterval();
