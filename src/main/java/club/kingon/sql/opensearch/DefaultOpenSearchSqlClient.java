@@ -2,9 +2,9 @@ package club.kingon.sql.opensearch;
 
 import club.kingon.sql.opensearch.api.Endpoint;
 import club.kingon.sql.opensearch.parser.DefaultOpenSearchSQLParser;
+import club.kingon.sql.opensearch.parser.OpenSearchSQLParser;
 import club.kingon.sql.opensearch.parser.entry.OpenSearchDataOperationEntry;
 import club.kingon.sql.opensearch.parser.entry.OpenSearchQueryEntry;
-import club.kingon.sql.opensearch.parser.OpenSearchSQLParser;
 import club.kingon.sql.opensearch.support.DefaultOpenSearchAppManager;
 import com.aliyun.opensearch.DocumentClient;
 import com.aliyun.opensearch.SearcherClient;
@@ -34,6 +34,8 @@ public class DefaultOpenSearchSqlClient implements OpenSearchSqlClient {
     private DocumentClient documentClient;
 
     private OpenSearchSQLParser sqlParser;
+
+    private SearchQueryModeEnum defaultSearchMode;
 
     public DefaultOpenSearchSqlClient(String accessKey, String secret, Endpoint endpoint) {
         this(accessKey, secret, endpoint, null);
@@ -90,10 +92,18 @@ public class DefaultOpenSearchSqlClient implements OpenSearchSqlClient {
     public DefaultOpenSearchSqlClient(String accessKey, String secret, Endpoint endpoint, boolean intranet,
                                       String appName, long startWaitMills, boolean enableManagement,
                                       int connectionTimeout, int readTimeout) {
+        this(accessKey, secret, endpoint, intranet, appName, startWaitMills, enableManagement, connectionTimeout, readTimeout, SearchQueryModeEnum.HIT);
+    }
+
+    public DefaultOpenSearchSqlClient(String accessKey, String secret, Endpoint endpoint, boolean intranet,
+                                      String appName, long startWaitMills, boolean enableManagement,
+                                      int connectionTimeout, int readTimeout, SearchQueryModeEnum defaultSearchMode) {
         openSearchManager = new DefaultOpenSearchAppManager(accessKey, secret,endpoint, intranet, appName, startWaitMills, enableManagement, connectionTimeout, readTimeout);
         searcherClient = new SearcherClient(openSearchManager.getOpenSearchClient());
         documentClient = new DocumentClient(openSearchManager.getOpenSearchClient());
         sqlParser = new DefaultOpenSearchSQLParser(openSearchManager, this);
+        // 默认搜索模式, 若默认搜索模式为HIT, 当使用者未添加limit限制时, 将会填充limit 10, 若搜索模式为SCROLL未添加limit限制将依旧触发scroll滚动
+        this.defaultSearchMode = defaultSearchMode;
     }
 
 
@@ -112,6 +122,12 @@ public class DefaultOpenSearchSqlClient implements OpenSearchSqlClient {
         // 支持aggregate参数化注入
         if (aggregates != null && !aggregates.isEmpty()) {
             config.setAggregates(aggregates);
+        }
+        // defaultSearchModel检查及修正
+        if (SearchQueryModeEnum.HIT.equals(defaultSearchMode) && SearchQueryModeEnum.SCROLL.equals(config.getQueryMode())) {
+            config.setQueryMode(SearchQueryModeEnum.HIT);
+            config.setDeepPaging(null);
+            config.setCount(10);
         }
         return new DefaultOpenSearchQueryIterator(searcherClient, config);
     }

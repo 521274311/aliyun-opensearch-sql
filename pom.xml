@@ -6,7 +6,7 @@
 
     <groupId>club.kingons.plugins.sql</groupId>
     <artifactId>aliyun-opensearch-sql</artifactId>
-    <version>0.1.0-SNAPSHOT</version>
+    <version>0.1.1-SNAPSHOT</version>
     <build>
         <plugins>
             <plugin>
