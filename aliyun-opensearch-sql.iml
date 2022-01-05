@@ -31,6 +31,5 @@
     <orderEntry type="library" name="Maven: io.opentracing:opentracing-util:0.33.0" level="project" />
     <orderEntry type="library" name="Maven: io.opentracing:opentracing-noop:0.33.0" level="project" />
     <orderEntry type="library" name="Maven: com.alibaba:fastjson:1.2.78" level="project" />
-    <orderEntry type="library" name="Maven: club.kingons.plugins.sql:sql-builder:0.0.2-SNAPSHOT" level="project" />
   </component>
 </module>

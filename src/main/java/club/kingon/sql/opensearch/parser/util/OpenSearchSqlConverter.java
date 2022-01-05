@@ -536,15 +536,13 @@ public class OpenSearchSqlConverter {
     /**
      * https://help.aliyun.com/document_detail/180049.html
      */
-    public static Set<Aggregate> explainAggregate(MySqlSelectQueryBlock block, MySqlSchemaStatVisitor visitor) {
+    public static Set<Aggregate> explainAggregate(MySqlSelectQueryBlock block, MySqlSchemaStatVisitor visitor, String aggFilter, OpenSearchManager manager) {
         Set<TableStat.Column> groupByColumns = visitor.getGroupByColumns();
         Set<Aggregate> aggregateSet = new HashSet<>();
         List<SQLAggregateExpr> aggregateFunctions = visitor.getAggregateFunctions();
         List<String> effectGroupByColumnNames = new ArrayList<>();
-        Aggregate aggregate = null;
         // field
         if (groupByColumns != null && !groupByColumns.isEmpty()) {
-            aggregate = new Aggregate();
             for (TableStat.Column column : groupByColumns) {
                 effectGroupByColumnNames.add(column.getName());
             }
@@ -552,9 +550,6 @@ public class OpenSearchSqlConverter {
         StringBuilder aggFunBuilder = new StringBuilder();
         // group by
         if (aggregateFunctions != null && !aggregateFunctions.isEmpty()) {
-            if (aggregate == null) {
-                throw new OpenSearchDqlException("AggFun must have groupKey.");
-            }
             String aggFunName;
             List<SQLExpr> arguments;
             for (SQLAggregateExpr aggregateExpr : aggregateFunctions) {
@@ -586,12 +581,22 @@ public class OpenSearchSqlConverter {
                 }
             }
         }
+        // having parse
+        // 当where查询中的filter为null时, 支持
+        if ((aggFilter == null || "".equals(aggFilter)) && block.getGroupBy() != null && block.getGroupBy().getHaving() != null) {
+            Tuple2<Tuple2<String, String>, Map<String, Object>> r = (Tuple2<Tuple2<String, String>, Map<String, Object>>) resolveQueryAndFilterSQLExpr(block.getGroupBy().getHaving(), manager);
+            if (r != null && r.t1 != null && !"".equals(r.t1.t2)) {
+                aggFilter = r.t1.t2;
+            }
+        }
+
         if (!effectGroupByColumnNames.isEmpty() && aggFunBuilder.length() > 0) {
             for (String effectGroupByColumnName : effectGroupByColumnNames) {
-                aggregateSet.add(new Aggregate() {{
-                    setGroupKey(effectGroupByColumnName);
-                    setAggFun(aggFunBuilder.substring(0, aggFunBuilder.length() - 1));
-                }});
+                Aggregate agg = new Aggregate();
+                agg.setGroupKey(effectGroupByColumnName);
+                agg.setAggFun(aggFunBuilder.substring(0, aggFunBuilder.length() - 1));
+                agg.setAggFilter(aggFilter);
+                aggregateSet.add(agg);
             }
         }
         return !aggregateSet.isEmpty() ? aggregateSet : null;

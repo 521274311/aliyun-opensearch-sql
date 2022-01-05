@@ -45,7 +45,7 @@ public class DefaultOpenSearchQuerySQLParser extends AbstractOpenSearchSQLParser
         config.setRank(OpenSearchSqlConverter.explainRank(queryAndFilterAndParams.t2));
         config.setKvpairs((String) queryAndFilterAndParams.t2.get(Constants.DEFAULT_KVPAIRS));
         config.setDistincts(OpenSearchSqlConverter.explainDistinct(block));
-        config.setAggregates(OpenSearchSqlConverter.explainAggregate(block, visitor));
+        config.setAggregates(OpenSearchSqlConverter.explainAggregate(block, visitor, queryAndFilterAndParams.t1.t2, manager));
         config.setSort(OpenSearchSqlConverter.explainSort(block, manager));
         Tuple2<Integer, Integer> offsetAndCount = OpenSearchSqlConverter.explainStartAndHit(block.getLimit());
         if (offsetAndCount.t2 == null) {
