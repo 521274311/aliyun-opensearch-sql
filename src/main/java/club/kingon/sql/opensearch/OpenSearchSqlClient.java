@@ -10,7 +10,7 @@ import java.util.Set;
  * @author dragons
  * @date 2021/8/12 16:38
  */
-public interface OpenSearchSqlClient {
+public interface OpenSearchSqlClient extends AutoCloseable {
 
     default OpenSearchQueryIterator query(String sql) {
         return query(sql, null);
@@ -26,5 +26,6 @@ public interface OpenSearchSqlClient {
 
     OpenSearchResult delete(String sql);
 
+    @Override
     void close();
 }
