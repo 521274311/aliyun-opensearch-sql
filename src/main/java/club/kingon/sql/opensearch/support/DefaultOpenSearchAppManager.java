@@ -45,7 +45,10 @@ public class DefaultOpenSearchAppManager extends AbstractOpenSearchAppSchemaMana
                                        String appName, long startWaitMills, boolean enableManagement,
                                        int connectionTimeout, int readTimeout) {
         super(accessKey, secret, endpoint, intranet, appName, enableManagement, enableManagement, connectionTimeout, readTimeout);
-        sleep(startWaitMills);
+        if (appName != null && enableManagement) {
+            // 等待一定时间以加载AppName相关信息对Sql进行优化
+            sleep(startWaitMills);
+        }
     }
 
     private void sleep(long mills) {
