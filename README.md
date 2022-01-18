@@ -2,6 +2,8 @@
 ### 提供阿里云开放搜索SQL支持
 ##### 官方文档地址：https://help.aliyun.com/product/29102.html
 
+#### SpringBoot 集成见项目: https://gitee.com/kingons/spring-boot-data-aliyun-opensearch
+
 #### 使用建议: 
 ##### 1.需要查询的字段至少创建一个与字段名同名索引
 ##### 2.需要查询的字段若支持设置为属性字段则添加到属性字段
