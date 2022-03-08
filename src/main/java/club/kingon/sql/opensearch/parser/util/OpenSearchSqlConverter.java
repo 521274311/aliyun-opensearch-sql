@@ -581,6 +581,10 @@ public class OpenSearchSqlConverter {
                 }
             }
         }
+        // support no agg fun group. that `count()` agg fun is default.
+        else {
+            aggFunBuilder.append("count()#");
+        }
         // having parse
         // 当where查询中的filter为null时, 支持
         if ((aggFilter == null || "".equals(aggFilter)) && block.getGroupBy() != null && block.getGroupBy().getHaving() != null) {
