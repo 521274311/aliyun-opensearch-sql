@@ -112,6 +112,8 @@ public class OpenSearchSqlConverter {
             } else if (x.getExpr() instanceof SQLAllColumnExpr) {
                 result.clear();
                 break;
+            } else if (x.getExpr() instanceof SQLPropertyExpr) {
+                result.add(((SQLPropertyExpr) x.getExpr()).getName());
             }
         }
         return result;
@@ -365,6 +367,8 @@ public class OpenSearchSqlConverter {
         if (expr instanceof SQLIdentifierExpr) return getQueryAndFilter((SQLIdentifierExpr) expr, manager);
         if (expr instanceof SQLNumericLiteralExpr) return getQueryAndFilter((SQLNumericLiteralExpr) expr, manager);
         if (expr instanceof SQLTextLiteralExpr) return getQueryAndFilter((SQLTextLiteralExpr) expr, manager);
+        // property
+        if (expr instanceof SQLPropertyExpr) return getQueryAndFilter((SQLPropertyExpr) expr, manager);
         return binary ? Tuple2.of(Tuple2.of(Constants.EMPTY_STRING, Constants.EMPTY_STRING), new HashMap<>()) : "";
     }
 
@@ -380,6 +384,10 @@ public class OpenSearchSqlConverter {
     }
 
     private static String getQueryAndFilter(SQLIdentifierExpr expr, OpenSearchManager manager) {
+        return expr.getName();
+    }
+
+    private static String getQueryAndFilter(SQLPropertyExpr expr, OpenSearchManager manager) {
         return expr.getName();
     }
 
@@ -526,6 +534,11 @@ public class OpenSearchSqlConverter {
                     setReserved(false);
                     setUpdateTotalHit(true);
                 }});
+            } else if (expr instanceof SQLPropertyExpr) {
+                distinctSet.add(new Distinct(((SQLPropertyExpr)expr).getName()) {{
+                    setReserved(false);
+                    setUpdateTotalHit(true);
+                }});
             } else {
                 log.warn("distinct: exists illegal SQLExpr type => {}, and this will be ignored. only SQLIdentifierExpr type is allowed", expr.getClass().getSimpleName());
             }
@@ -588,9 +601,14 @@ public class OpenSearchSqlConverter {
         // having parse
         // 当where查询中的filter为null时, 支持
         if ((aggFilter == null || "".equals(aggFilter)) && block.getGroupBy() != null && block.getGroupBy().getHaving() != null) {
-            Tuple2<Tuple2<String, String>, Map<String, Object>> r = (Tuple2<Tuple2<String, String>, Map<String, Object>>) resolveQueryAndFilterSQLExpr(block.getGroupBy().getHaving(), manager);
-            if (r != null && r.t1 != null && !"".equals(r.t1.t2)) {
-                aggFilter = r.t1.t2;
+            Object groupObject = resolveQueryAndFilterSQLExpr(block.getGroupBy().getHaving(), manager);
+            if (groupObject instanceof Tuple2) {
+                Tuple2<Tuple2<String, String>, Map<String, Object>> r = (Tuple2<Tuple2<String, String>, Map<String, Object>>) groupObject;
+                if (r != null && r.t1 != null && !"".equals(r.t1.t2)) {
+                    aggFilter = r.t1.t2;
+                }
+            } else if (groupObject instanceof String) {
+                aggFilter = (String) groupObject;
             }
         }
 
